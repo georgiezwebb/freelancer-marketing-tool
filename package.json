@@ -6,8 +6,8 @@
     "postcss": "8.5.10"
   },
   "scripts": {
-    "predev": "node scripts/ensure-capstone-node-modules.mjs",
-    "dev": "next dev",
+    "dev": "next dev --webpack",
+    "dev:turbo": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
