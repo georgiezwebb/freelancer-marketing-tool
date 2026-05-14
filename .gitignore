@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+# Parent symlink for Next dev (resolve tailwindcss when tooling context is capstone-project)
+/../node_modules
 /.pnp
 .pnp.*
 .yarn/*
