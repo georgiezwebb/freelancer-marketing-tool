@@ -10,7 +10,7 @@ import {
 } from "@clerk/nextjs"
 import { MenuIcon } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Sheet,
   SheetContent,
@@ -19,6 +19,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
+
+const DASHBOARD_HREF = "/dashboard" as const
 
 const navLinks = [
   { href: "#features", label: "Features" },
@@ -41,6 +43,14 @@ function AuthActions({ className }: { className?: string }) {
   if (isSignedIn) {
     return (
       <div className={cn("flex items-center gap-2", className)}>
+        <Link
+          href={DASHBOARD_HREF}
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" })
+          )}
+        >
+          Dashboard
+        </Link>
         <UserButton
           appearance={{
             elements: { avatarBox: "size-8 rounded-none" },
@@ -52,12 +62,12 @@ function AuthActions({ className }: { className?: string }) {
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <SignInButton mode="modal">
+      <SignInButton mode="modal" forceRedirectUrl={DASHBOARD_HREF}>
         <Button variant="outline" size="sm" className="bg-background/50 text-foreground hover:bg-accent/35">
           Sign in
         </Button>
       </SignInButton>
-      <SignUpButton mode="modal">
+      <SignUpButton mode="modal" forceRedirectUrl={DASHBOARD_HREF}>
         <Button size="sm" className="shadow-md shadow-primary/15">
           Get started
         </Button>
@@ -181,19 +191,28 @@ function MobileAuth({ onClose }: { onClose: () => void }) {
 
   if (isSignedIn) {
     return (
-      <div className="flex justify-start">
-        <UserButton
-          appearance={{
-            elements: { avatarBox: "size-9 rounded-none" },
-          }}
-        />
+      <div className="flex flex-col gap-2">
+        <Link
+          href={DASHBOARD_HREF}
+          className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}
+          onClick={() => onClose()}
+        >
+          Dashboard
+        </Link>
+        <div className="flex justify-start">
+          <UserButton
+            appearance={{
+              elements: { avatarBox: "size-9 rounded-none" },
+            }}
+          />
+        </div>
       </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <SignInButton mode="modal">
+      <SignInButton mode="modal" forceRedirectUrl={DASHBOARD_HREF}>
         <Button
           variant="outline"
           className="w-full"
@@ -202,7 +221,7 @@ function MobileAuth({ onClose }: { onClose: () => void }) {
           Sign in
         </Button>
       </SignInButton>
-      <SignUpButton mode="modal">
+      <SignUpButton mode="modal" forceRedirectUrl={DASHBOARD_HREF}>
         <Button className="w-full shadow-md shadow-primary/15" onClick={() => onClose()}>
           Get started
         </Button>

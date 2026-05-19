@@ -8,13 +8,13 @@
  *
  * 🟢 You can import this file directly.
  */
-import type * as runtime from "@prisma/client/runtime/library"
+import type * as runtime from "@prisma/client/runtime/client"
 import type * as $Enums from "../enums"
 import type * as Prisma from "../internal/prismaNamespace"
 
 /**
  * Model User
- * App user (add auth fields later if needed).
+ * App user (synced from Clerk on first dashboard visit).
  */
 export type UserModel = runtime.Types.Result.DefaultSelection<Prisma.$UserPayload>
 
@@ -158,7 +158,7 @@ export type UserGroupByOutputType = {
   _max: UserMaxAggregateOutputType | null
 }
 
-type GetUserGroupByPayload<T extends UserGroupByArgs> = Prisma.PrismaPromise<
+export type GetUserGroupByPayload<T extends UserGroupByArgs> = Prisma.PrismaPromise<
   Array<
     Prisma.PickEnumerable<UserGroupByOutputType, T['by']> &
       {
@@ -182,7 +182,7 @@ export type UserWhereInput = {
   name?: Prisma.StringNullableFilter<"User"> | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
-  copies?: Prisma.CopyListRelationFilter
+  copyTypes?: Prisma.CopyTypeListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -191,7 +191,7 @@ export type UserOrderByWithRelationInput = {
   name?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
-  copies?: Prisma.CopyOrderByRelationAggregateInput
+  copyTypes?: Prisma.CopyTypeOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -203,7 +203,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringNullableFilter<"User"> | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
-  copies?: Prisma.CopyListRelationFilter
+  copyTypes?: Prisma.CopyTypeListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -234,7 +234,7 @@ export type UserCreateInput = {
   name?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  copies?: Prisma.CopyCreateNestedManyWithoutUserInput
+  copyTypes?: Prisma.CopyTypeCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -243,7 +243,7 @@ export type UserUncheckedCreateInput = {
   name?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  copies?: Prisma.CopyUncheckedCreateNestedManyWithoutUserInput
+  copyTypes?: Prisma.CopyTypeUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -252,7 +252,7 @@ export type UserUpdateInput = {
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  copies?: Prisma.CopyUpdateManyWithoutUserNestedInput
+  copyTypes?: Prisma.CopyTypeUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -261,7 +261,7 @@ export type UserUncheckedUpdateInput = {
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  copies?: Prisma.CopyUncheckedUpdateManyWithoutUserNestedInput
+  copyTypes?: Prisma.CopyTypeUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -329,21 +329,21 @@ export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
 }
 
-export type UserCreateNestedOneWithoutCopiesInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutCopiesInput, Prisma.UserUncheckedCreateWithoutCopiesInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCopiesInput
+export type UserCreateNestedOneWithoutCopyTypesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutCopyTypesInput, Prisma.UserUncheckedCreateWithoutCopyTypesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCopyTypesInput
   connect?: Prisma.UserWhereUniqueInput
 }
 
-export type UserUpdateOneRequiredWithoutCopiesNestedInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutCopiesInput, Prisma.UserUncheckedCreateWithoutCopiesInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCopiesInput
-  upsert?: Prisma.UserUpsertWithoutCopiesInput
+export type UserUpdateOneRequiredWithoutCopyTypesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutCopyTypesInput, Prisma.UserUncheckedCreateWithoutCopyTypesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCopyTypesInput
+  upsert?: Prisma.UserUpsertWithoutCopyTypesInput
   connect?: Prisma.UserWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutCopiesInput, Prisma.UserUpdateWithoutCopiesInput>, Prisma.UserUncheckedUpdateWithoutCopiesInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutCopyTypesInput, Prisma.UserUpdateWithoutCopyTypesInput>, Prisma.UserUncheckedUpdateWithoutCopyTypesInput>
 }
 
-export type UserCreateWithoutCopiesInput = {
+export type UserCreateWithoutCopyTypesInput = {
   id?: string
   email: string
   name?: string | null
@@ -351,7 +351,7 @@ export type UserCreateWithoutCopiesInput = {
   updatedAt?: Date | string
 }
 
-export type UserUncheckedCreateWithoutCopiesInput = {
+export type UserUncheckedCreateWithoutCopyTypesInput = {
   id?: string
   email: string
   name?: string | null
@@ -359,23 +359,23 @@ export type UserUncheckedCreateWithoutCopiesInput = {
   updatedAt?: Date | string
 }
 
-export type UserCreateOrConnectWithoutCopiesInput = {
+export type UserCreateOrConnectWithoutCopyTypesInput = {
   where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutCopiesInput, Prisma.UserUncheckedCreateWithoutCopiesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutCopyTypesInput, Prisma.UserUncheckedCreateWithoutCopyTypesInput>
 }
 
-export type UserUpsertWithoutCopiesInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutCopiesInput, Prisma.UserUncheckedUpdateWithoutCopiesInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutCopiesInput, Prisma.UserUncheckedCreateWithoutCopiesInput>
+export type UserUpsertWithoutCopyTypesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutCopyTypesInput, Prisma.UserUncheckedUpdateWithoutCopyTypesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutCopyTypesInput, Prisma.UserUncheckedCreateWithoutCopyTypesInput>
   where?: Prisma.UserWhereInput
 }
 
-export type UserUpdateToOneWithWhereWithoutCopiesInput = {
+export type UserUpdateToOneWithWhereWithoutCopyTypesInput = {
   where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutCopiesInput, Prisma.UserUncheckedUpdateWithoutCopiesInput>
+  data: Prisma.XOR<Prisma.UserUpdateWithoutCopyTypesInput, Prisma.UserUncheckedUpdateWithoutCopyTypesInput>
 }
 
-export type UserUpdateWithoutCopiesInput = {
+export type UserUpdateWithoutCopyTypesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -383,7 +383,7 @@ export type UserUpdateWithoutCopiesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type UserUncheckedUpdateWithoutCopiesInput = {
+export type UserUncheckedUpdateWithoutCopyTypesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -397,11 +397,11 @@ export type UserUncheckedUpdateWithoutCopiesInput = {
  */
 
 export type UserCountOutputType = {
-  copies: number
+  copyTypes: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  copies?: boolean | UserCountOutputTypeCountCopiesArgs
+  copyTypes?: boolean | UserCountOutputTypeCountCopyTypesArgs
 }
 
 /**
@@ -417,8 +417,8 @@ export type UserCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensi
 /**
  * UserCountOutputType without action
  */
-export type UserCountOutputTypeCountCopiesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.CopyWhereInput
+export type UserCountOutputTypeCountCopyTypesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CopyTypeWhereInput
 }
 
 
@@ -428,7 +428,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   name?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  copies?: boolean | Prisma.User$copiesArgs<ExtArgs>
+  copyTypes?: boolean | Prisma.User$copyTypesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -458,7 +458,7 @@ export type UserSelectScalar = {
 
 export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "name" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  copies?: boolean | Prisma.User$copiesArgs<ExtArgs>
+  copyTypes?: boolean | Prisma.User$copyTypesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -467,7 +467,7 @@ export type UserIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
 export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "User"
   objects: {
-    copies: Prisma.$CopyPayload<ExtArgs>[]
+    copyTypes: Prisma.$CopyTypePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -869,7 +869,7 @@ readonly fields: UserFieldRefs;
  */
 export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  copies<T extends Prisma.User$copiesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$copiesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CopyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  copyTypes<T extends Prisma.User$copyTypesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$copyTypesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CopyTypePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1100,6 +1100,11 @@ export type UserFindManyArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
    * Skip the first `n` Users.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   * 
+   * Filter by unique combinations of Users.
+   */
   distinct?: Prisma.UserScalarFieldEnum | Prisma.UserScalarFieldEnum[]
 }
 
@@ -1292,27 +1297,27 @@ export type UserDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
 }
 
 /**
- * User.copies
+ * User.copyTypes
  */
-export type User$copiesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type User$copyTypesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Copy
+   * Select specific fields to fetch from the CopyType
    */
-  select?: Prisma.CopySelect<ExtArgs> | null
+  select?: Prisma.CopyTypeSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Copy
+   * Omit specific fields from the CopyType
    */
-  omit?: Prisma.CopyOmit<ExtArgs> | null
+  omit?: Prisma.CopyTypeOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.CopyInclude<ExtArgs> | null
-  where?: Prisma.CopyWhereInput
-  orderBy?: Prisma.CopyOrderByWithRelationInput | Prisma.CopyOrderByWithRelationInput[]
-  cursor?: Prisma.CopyWhereUniqueInput
+  include?: Prisma.CopyTypeInclude<ExtArgs> | null
+  where?: Prisma.CopyTypeWhereInput
+  orderBy?: Prisma.CopyTypeOrderByWithRelationInput | Prisma.CopyTypeOrderByWithRelationInput[]
+  cursor?: Prisma.CopyTypeWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.CopyScalarFieldEnum | Prisma.CopyScalarFieldEnum[]
+  distinct?: Prisma.CopyTypeScalarFieldEnum | Prisma.CopyTypeScalarFieldEnum[]
 }
 
 /**

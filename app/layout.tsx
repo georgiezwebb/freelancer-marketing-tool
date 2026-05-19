@@ -30,7 +30,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="relative isolate min-h-full">
-        <ClerkProvider>
+        <ClerkProvider
+          signInForceRedirectUrl="/dashboard"
+          signUpForceRedirectUrl="/dashboard"
+        >
           <div className="landing-grain" aria-hidden />
           <div className="relative z-10 flex min-h-full flex-col">{children}</div>
         </ClerkProvider>
