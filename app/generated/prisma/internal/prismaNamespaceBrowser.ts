@@ -101,6 +101,7 @@ export const CopyVersionScalarFieldEnum = {
   typeId: 'typeId',
   title: 'title',
   content: 'content',
+  archivedAt: 'archivedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
