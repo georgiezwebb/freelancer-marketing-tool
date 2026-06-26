@@ -1,7 +1,7 @@
 import {
-  CalendarDaysIcon,
+  BookOpenIcon,
   FolderKanbanIcon,
-  MessagesSquareIcon,
+  LayersIcon,
 } from "lucide-react"
 
 import {
@@ -16,24 +16,24 @@ import { cn } from "@/lib/utils"
 const items = [
   {
     icon: FolderKanbanIcon,
-    title: "Copy library",
+    title: "Copy, grouped by job",
     accent: "from-primary/25 via-primary/10 to-accent/35",
     description:
-      "Save taglines, case-study blurbs, and service descriptions with labels so you can reuse the right message for each channel.",
+      "Positioning, LinkedIn, email intros, case studies — the usual suspects, already sorted. Less hunting through Notion pages and old Google Docs.",
   },
   {
-    icon: CalendarDaysIcon,
-    title: "Simple marketing plan",
+    icon: LayersIcon,
+    title: "Versions you can tell apart",
     accent: "from-chart-2/30 via-primary/10 to-muted",
     description:
-      "Outline what to post, send, or pitch each week, without a spreadsheet degree. Adjust as client work shifts.",
+      "Save a new draft without overwriting the last one. Archive what didn't land and keep a clear view of which version you're running with.",
   },
   {
-    icon: MessagesSquareIcon,
-    title: "Channel-ready snippets",
+    icon: BookOpenIcon,
+    title: "A nudge when you're stuck",
     accent: "from-accent/40 via-primary/15 to-secondary",
     description:
-      "Keep LinkedIn hooks, email intros, and portfolio blurbs in sync so your voice stays consistent everywhere.",
+      "Each type comes with short writing notes — what to cover, what to skip — plus space for your own reminders as you refine the copy.",
   },
 ] as const
 
@@ -54,11 +54,11 @@ export function Features() {
             id="features-heading"
             className="font-heading text-3xl font-semibold tracking-tight text-foreground sm:text-4xl md:text-[2.5rem] md:leading-tight"
           >
-            Everything you need to sound clear, not busy
+            What it actually does
           </h2>
           <p className="mt-4 text-muted-foreground sm:text-lg">
-            One workspace for the words you repeat and the plan that keeps your
-            marketing moving.
+            Not a content calendar or an AI writer — just a tidy shelf for the
+            words you reuse, with enough structure to make writing them easier.
           </p>
         </div>
         <ul className="mt-12 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">

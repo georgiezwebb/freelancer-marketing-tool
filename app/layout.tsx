@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PitchKit: Marketing copy & plans for freelancers",
+  title: "PitchKit — freelance copy shelf (portfolio project)",
   description:
-    "Store marketing copy, bios, and snippets in one place and build a simple marketing plan that fits around client work.",
+    "A portfolio app for storing marketing and sales copy, tracking versions, and getting unstuck with short writing notes — built for freelancers who keep rewriting the same pitches.",
 };
 
 export default function RootLayout({
