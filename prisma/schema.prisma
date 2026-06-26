@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// App user (synced from Clerk on first dashboard visit).
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  copyTypes CopyType[]
+}
+
+/// User-defined category for organizing copy (e.g. Type 1, LinkedIn, Email).
+model CopyType {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  writingNotes  String        @default("") @db.Text
+  sortOrder     Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  versions  CopyVersion[]
+
+  @@index([userId])
+  @@map("copy_types")
+}
+
+/// A version or post within a type (title + body).
+model CopyVersion {
+  id        String   @id @default(cuid())
+  typeId    String
+  type      CopyType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  title      String?
+  content    String    @default("") @db.Text
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([typeId])
+  @@map("copy_versions")
+}

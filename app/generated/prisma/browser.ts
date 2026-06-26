@@ -19,11 +19,16 @@ export * as $Enums from './enums'
 export * from './enums';
 /**
  * Model User
- * App user (add auth fields later if needed).
+ * App user (synced from Clerk on first dashboard visit).
  */
 export type User = Prisma.UserModel
 /**
- * Model Copy
- * Saved marketing text (bios, blurbs, posts, etc.).
+ * Model CopyType
+ * User-defined category for organizing copy (e.g. Type 1, LinkedIn, Email).
  */
-export type Copy = Prisma.CopyModel
+export type CopyType = Prisma.CopyTypeModel
+/**
+ * Model CopyVersion
+ * A version or post within a type (title + body).
+ */
+export type CopyVersion = Prisma.CopyVersionModel

@@ -2,9 +2,15 @@
 
 import * as React from "react"
 import Link from "next/link"
+import {
+  SignInButton,
+  SignUpButton,
+  UserButton,
+  useAuth,
+} from "@clerk/nextjs"
 import { MenuIcon } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Sheet,
   SheetContent,
@@ -14,21 +20,73 @@ import {
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 
+const DASHBOARD_HREF = "/dashboard" as const
+
 const navLinks = [
   { href: "#features", label: "Features" },
   { href: "#faq", label: "FAQ" },
 ] as const
 
+function AuthActions({ className }: { className?: string }) {
+  const { isLoaded, isSignedIn } = useAuth()
+
+  if (!isLoaded) {
+    return (
+      <div className={cn("flex items-center gap-2", className)}>
+        <Button variant="outline" size="sm" disabled className="min-w-20">
+          …
+        </Button>
+      </div>
+    )
+  }
+
+  if (isSignedIn) {
+    return (
+      <div className={cn("flex items-center gap-2", className)}>
+        <Link
+          href={DASHBOARD_HREF}
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" })
+          )}
+        >
+          Dashboard
+        </Link>
+        <UserButton
+          appearance={{
+            elements: { avatarBox: "size-8 rounded-none" },
+          }}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn("flex items-center gap-2", className)}>
+      <SignInButton mode="modal" forceRedirectUrl={DASHBOARD_HREF}>
+        <Button variant="outline" size="sm" className="bg-background/50 text-foreground hover:bg-accent/35">
+          Sign in
+        </Button>
+      </SignInButton>
+      <SignUpButton mode="modal" forceRedirectUrl={DASHBOARD_HREF}>
+        <Button size="sm" className="shadow-md shadow-primary/15">
+          Get started
+        </Button>
+      </SignUpButton>
+    </div>
+  )
+}
+
 export function Navbar({ className }: { className?: string }) {
   const [open, setOpen] = React.useState(false)
   const [hidden, setHidden] = React.useState(false)
-  const [reduceMotion, setReduceMotion] = React.useState(true)
+  const [prefersReducedMotion] = React.useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
   const lastY = React.useRef(0)
 
   React.useEffect(() => {
-    setReduceMotion(
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    )
     lastY.current = window.scrollY
 
     const onScroll = () => {
@@ -57,7 +115,7 @@ export function Navbar({ className }: { className?: string }) {
       className={cn(
         "sticky top-0 z-50 w-full border-b border-border/60 bg-background/70 backdrop-blur-xl backdrop-saturate-150",
         "motion-safe:transition-nav",
-        !reduceMotion && hidden && "-translate-y-full",
+        !prefersReducedMotion && hidden && "-translate-y-full",
         className
       )}
     >
@@ -84,25 +142,7 @@ export function Navbar({ className }: { className?: string }) {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={<Link href="#hero" />}
-            className="bg-background/50 text-foreground hover:bg-accent/35"
-          >
-            Sign in
-          </Button>
-          <Button
-            size="sm"
-            nativeButton={false}
-            render={<Link href="#hero" />}
-            className="shadow-md shadow-primary/15"
-          >
-            Get started
-          </Button>
-        </div>
+        <AuthActions className="hidden md:flex" />
 
         <div className="flex items-center md:hidden">
           <Sheet open={open} onOpenChange={setOpen}>
@@ -130,19 +170,62 @@ export function Navbar({ className }: { className?: string }) {
                     {label}
                   </Button>
                 ))}
-                <Button
-                  className="mt-4 w-full shadow-md shadow-primary/15"
-                  nativeButton={false}
-                  render={<Link href="#hero" />}
-                  onClick={() => setOpen(false)}
-                >
-                  Get started
-                </Button>
+                <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+                  <MobileAuth onClose={() => setOpen(false)} />
+                </div>
               </nav>
             </SheetContent>
           </Sheet>
         </div>
       </div>
     </header>
+  )
+}
+
+function MobileAuth({ onClose }: { onClose: () => void }) {
+  const { isLoaded, isSignedIn } = useAuth()
+
+  if (!isLoaded) {
+    return <p className="text-sm text-muted-foreground">Loading…</p>
+  }
+
+  if (isSignedIn) {
+    return (
+      <div className="flex flex-col gap-2">
+        <Link
+          href={DASHBOARD_HREF}
+          className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}
+          onClick={() => onClose()}
+        >
+          Dashboard
+        </Link>
+        <div className="flex justify-start">
+          <UserButton
+            appearance={{
+              elements: { avatarBox: "size-9 rounded-none" },
+            }}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <SignInButton mode="modal" forceRedirectUrl={DASHBOARD_HREF}>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => onClose()}
+        >
+          Sign in
+        </Button>
+      </SignInButton>
+      <SignUpButton mode="modal" forceRedirectUrl={DASHBOARD_HREF}>
+        <Button className="w-full shadow-md shadow-primary/15" onClick={() => onClose()}>
+          Get started
+        </Button>
+      </SignUpButton>
+    </div>
   )
 }
