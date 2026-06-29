@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArchiveIcon, ArchiveRestoreIcon, StarIcon, Trash2Icon } from "lucide-react";
+import { ArchiveIcon, ArchiveRestoreIcon, ChevronLeftIcon, StarIcon, Trash2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +59,7 @@ type Props = {
     versionId: string,
     inUse: boolean
   ) => boolean | void | Promise<boolean | void>;
+  onBackToVersions?: () => void;
 };
 
 export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
@@ -76,6 +77,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
       onDeleted,
       onArchived,
       onToggleInUse,
+      onBackToVersions,
     },
     ref
   ) {
@@ -269,106 +271,143 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-foreground/10 px-6 py-4">
-        <div>
-          {typeName ? (
-            <p className="inline-block border-2 border-foreground bg-muted/30 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-foreground">
-              {typeName}
-            </p>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-3 px-4 pt-3 pb-2 sm:px-6 sm:pt-4 sm:pb-3">
+          {onBackToVersions ? (
+            <button
+              type="button"
+              onClick={onBackToVersions}
+              className="flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground md:hidden"
+            >
+              <ChevronLeftIcon className="size-3.5" />
+              Back to versions
+            </button>
           ) : null}
-          <p className="text-xs text-muted-foreground">
-            {isArchived ? (
-              <>
-                <span className="font-medium text-foreground">Archived · </span>
-                {version.archivedAt ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              {typeName ? (
+                <p className="inline-block max-w-full truncate border-2 border-foreground bg-muted/30 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-foreground">
+                  {typeName}
+                </p>
+              ) : null}
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {isArchived ? (
                   <>
-                    Deletes{" "}
-                    {formatDateTime(
-                      archiveDeletionDateIso(version.archivedAt)
-                    )}
-                    {" · "}
+                    <span className="font-medium text-foreground">Archived · </span>
+                    {version.archivedAt ? (
+                      <>
+                        <span className="block sm:inline">
+                          Deletes{" "}
+                          {formatDateTime(
+                            archiveDeletionDateIso(version.archivedAt)
+                          )}
+                        </span>
+                        <span className="hidden sm:inline"> · </span>
+                      </>
+                    ) : null}
                   </>
+                ) : version.inUse ? (
+                  <span className="font-medium text-amber-600">In use · </span>
                 ) : null}
-              </>
-            ) : version.inUse ? (
-              <span className="font-medium text-amber-600">In use · </span>
-            ) : null}
-            Updated {formatDateTime(version.updatedAt)}
-            {version.createdAt !== version.updatedAt && (
-              <> · Created {formatDateTime(version.createdAt)}</>
-            )}
-          </p>
+                <span className="block sm:inline">
+                  Updated {formatDateTime(version.updatedAt)}
+                </span>
+                {version.createdAt !== version.updatedAt ? (
+                  <span className="hidden sm:inline">
+                    {" "}
+                    · Created {formatDateTime(version.createdAt)}
+                  </span>
+                ) : null}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+              {!isArchived ? (
+                <Button
+                  type="button"
+                  variant={version.inUse ? "default" : "outline"}
+                  size="sm"
+                  disabled={pending}
+                  onClick={async () => {
+                    const ok = await onToggleInUse(version.id, !version.inUse);
+                    if (ok === false) {
+                      window.alert(
+                        "Could not update. Run npm run db:push if the database schema is out of date."
+                      );
+                    }
+                  }}
+                >
+                  <StarIcon
+                    className={cn(
+                      version.inUse && "fill-amber-300 text-amber-300"
+                    )}
+                  />
+                  <span className="truncate">
+                    {version.inUse ? "In use" : "Mark in use"}
+                  </span>
+                </Button>
+              ) : null}
+              {isArchived ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={pending}
+                  onClick={() => handleSetArchived(false)}
+                >
+                  <ArchiveRestoreIcon />
+                  Restore
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={pending}
+                  onClick={() => handleSetArchived(true)}
+                >
+                  <ArchiveIcon />
+                  Archive
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={pending}
+                onClick={handleDelete}
+              >
+                <Trash2Icon />
+                Delete
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {!isArchived ? (
-            <Button
-              type="button"
-              variant={version.inUse ? "default" : "outline"}
-              size="sm"
-              disabled={pending}
-              onClick={async () => {
-                const ok = await onToggleInUse(version.id, !version.inUse);
-                if (ok === false) {
-                  window.alert(
-                    "Could not update. Run npm run db:push if the database schema is out of date."
-                  );
-                }
-              }}
-            >
-              <StarIcon
-                className={cn(
-                  version.inUse && "fill-amber-300 text-amber-300"
-                )}
-              />
-              {version.inUse ? "In use" : "Mark in use"}
-            </Button>
+
+        <div className="sticky top-0 z-10 flex flex-col gap-2 border-b border-foreground/10 bg-background/95 px-4 py-2 backdrop-blur-sm sm:px-6">
+          {error || dirty ? (
+            <div className="text-xs text-muted-foreground">
+              {error ? (
+                <p className="text-destructive" role="alert">
+                  {error}
+                </p>
+              ) : (
+                <p>Unsaved changes</p>
+              )}
+            </div>
           ) : null}
-          {isArchived ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={pending}
-              onClick={() => handleSetArchived(false)}
-            >
-              <ArchiveRestoreIcon />
-              Restore
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={pending}
-              onClick={() => handleSetArchived(true)}
-            >
-              <ArchiveIcon />
-              Archive
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            disabled={pending}
-            onClick={handleDelete}
-          >
-            <Trash2Icon />
-            Delete
-          </Button>
           <Button
             type="button"
             size="sm"
             disabled={pending || !dirty}
             onClick={handleSave}
+            className="w-full"
           >
             {pending ? "Saving…" : "Save"}
           </Button>
         </div>
-      </div>
 
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-6">
+        <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-6">
         <div className="space-y-1.5">
           <label htmlFor="version-title" className="text-xs font-medium">
             Title
@@ -414,18 +453,9 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
             }}
             onDirty={markDirty}
             placeholder="Write your copy…"
-            className="flex-1"
           />
         </div>
-
-        {error ? (
-          <p className="text-sm text-destructive" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {dirty ? (
-          <p className="text-xs text-muted-foreground">Unsaved changes</p>
-        ) : null}
+        </div>
       </div>
     </div>
   );

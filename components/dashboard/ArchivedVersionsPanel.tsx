@@ -28,7 +28,7 @@ function contentPreview(content: string, max = 160): string {
 }
 
 const checkboxClassName =
-  "size-4 shrink-0 cursor-pointer rounded-none border-2 border-foreground accent-primary disabled:cursor-not-allowed disabled:opacity-50";
+  "size-[1.125rem] shrink-0 cursor-pointer rounded-none border-2 border-foreground accent-primary disabled:cursor-not-allowed disabled:opacity-50 sm:size-4";
 
 type Props = {
   types: CopyTypeRecord[];
@@ -130,7 +130,7 @@ export function ArchivedVersionsPanel({
 
   if (archived.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-8 text-center sm:px-8">
         <ArchiveIcon className="size-10 text-muted-foreground/50" />
         <div className="max-w-md space-y-1">
           <p className="text-sm font-medium">No archived copy yet</p>
@@ -145,18 +145,18 @@ export function ArchivedVersionsPanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-foreground/10 px-6 py-5">
+      <div className="shrink-0 border-b border-foreground/10 px-4 py-4 sm:px-6 sm:py-5">
         <h2 className="font-heading text-lg font-semibold tracking-tight">
           Archived copy
         </h2>
-        <p className="mt-1.5 text-sm text-muted-foreground">
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
           {archived.length} version{archived.length === 1 ? "" : "s"}, newest
           archived first. {ARCHIVE_RETENTION_NOTICE}
         </p>
       </div>
 
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-foreground/10 bg-muted/20 px-6 py-3">
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium">
+      <div className="flex shrink-0 flex-col gap-3 border-b border-foreground/10 bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <label className="flex min-h-10 cursor-pointer items-center gap-2.5 text-sm font-medium">
           <input
             ref={selectAllRef}
             type="checkbox"
@@ -174,17 +174,27 @@ export function ArchivedVersionsPanel({
           size="sm"
           disabled={selectedIds.size === 0 || deleting}
           onClick={() => void handleDeleteSelected()}
+          className="w-full sm:w-auto"
         >
           <Trash2Icon />
           {deleting
             ? "Deleting…"
             : selectedIds.size > 0
-              ? `Delete permanently (${selectedIds.size})`
+              ? (
+                <>
+                  <span className="hidden sm:inline">
+                    Delete permanently ({selectedIds.size})
+                  </span>
+                  <span className="sm:hidden">
+                    Delete ({selectedIds.size})
+                  </span>
+                </>
+              )
               : "Delete permanently"}
         </Button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
         <ul className="mx-auto flex max-w-3xl flex-col gap-4">
           {archived.map(({ version, typeId, typeName }) => {
             const title = version.title?.trim() || "Untitled version";
@@ -221,17 +231,17 @@ export function ArchivedVersionsPanel({
                       )}
                     >
                       <CardHeader className="gap-1.5 pb-0">
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                           <div className="min-w-0 flex-1">
                             <CardTitle className="flex items-center gap-2 text-base">
                               <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
-                              <span className="truncate">{title}</span>
+                              <span className="line-clamp-2 sm:truncate">{title}</span>
                             </CardTitle>
                             <CardDescription className="mt-1.5">
                               {typeName}
                             </CardDescription>
                           </div>
-                          <span className="shrink-0 pt-0.5 text-right text-xs text-muted-foreground">
+                          <span className="shrink-0 text-xs text-muted-foreground sm:text-right">
                             <span className="block">
                               Archived {formatDateTime(archivedDate)}
                             </span>

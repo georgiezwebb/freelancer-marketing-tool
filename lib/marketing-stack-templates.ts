@@ -23,10 +23,7 @@ Answer:
 Everything else derives from this.
 
 Example:
-"I help small businesses simplify their operations through custom automation systems."
-
----
-Write your positioning statement below:`,
+"I help small businesses simplify their operations through custom automation systems."`,
   },
   {
     name: "LinkedIn Profile",
@@ -40,10 +37,7 @@ Minimum:
 • Examples / results
 • Contact info
 
-For many freelancers, LinkedIn alone is enough early on.
-
----
-Draft your LinkedIn copy below (headline, About, etc.):`,
+For many freelancers, LinkedIn alone is enough early on.`,
   },
   {
     name: "Simple Website (1–3 Pages Max)",
@@ -58,10 +52,7 @@ Just:
 Optional:
 • One case study page
 
-The goal is legitimacy and clarity, not design awards.
-
----
-Outline or write your website copy below:`,
+The goal is legitimacy and clarity, not design awards.`,
   },
   {
     name: "Service Descriptions",
@@ -72,10 +63,7 @@ Outline or write your website copy below:`,
 • Expected outcome
 • Approximate process
 
-Clients need clarity more than creativity.
-
----
-Write a service description below:`,
+Clients need clarity more than creativity.`,
   },
   {
     name: "Portfolio or Proof",
@@ -88,10 +76,7 @@ Write a service description below:`,
 • Before/after examples
 • Measurable results
 
-People trust evidence.
-
----
-Add proof points or a case study draft below:`,
+People trust evidence.`,
   },
   {
     name: "Outreach Message Template",
@@ -102,10 +87,7 @@ Add proof points or a case study draft below:`,
 • Follow-ups
 • Reconnecting
 
-This matters more than posting daily content.
-
----
-Draft your outreach template below:`,
+This matters more than posting daily content.`,
   },
   {
     name: "Basic Content System",
@@ -114,10 +96,7 @@ Draft your outreach template below:`,
 • One useful LinkedIn post weekly
 • One insight, lesson, observation, or client problem
 
-Consistency beats volume.
-
----
-Draft a post or content idea below:`,
+Consistency beats volume.`,
   },
   {
     name: "Call to Action",
@@ -128,10 +107,7 @@ Draft a post or content idea below:`,
 • Request a quote
 • Ask a question
 
-Most freelancers hide the next step unintentionally.
-
----
-Write your primary call to action below:`,
+Most freelancers hide the next step unintentionally.`,
   },
 ];
 
