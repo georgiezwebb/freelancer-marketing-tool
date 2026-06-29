@@ -15,9 +15,6 @@ export function Footer() {
             <p className="text-sm font-semibold text-foreground">
               Pitch<span className="text-gradient-hero">Kit</span>
             </p>
-            <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Marketing copy and planning for independent professionals.
-            </p>
           </div>
           <nav
             className="flex flex-wrap gap-x-8 gap-y-2 text-sm"
@@ -27,13 +24,21 @@ export function Footer() {
               href="#features"
               className="font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
             >
-              Features
+              What it does
             </Link>
             <Link
               href="#faq"
               className="font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
             >
-              FAQ
+              Notes
+            </Link>
+            <Link
+              href="https://github.com/georgiezwebb/freelancer-marketing-tool"
+              className="font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Source
             </Link>
             <Link
               href="#hero"
@@ -45,7 +50,7 @@ export function Footer() {
         </div>
         <Separator className="my-8 bg-gradient-to-r from-transparent via-border to-transparent" />
         <p className="text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} PitchKit. All rights reserved.
+          © Georgina Webb 2026
         </p>
       </div>
     </footer>

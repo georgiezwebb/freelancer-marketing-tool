@@ -1,4 +1,5 @@
 import { MARKETING_STACK_TYPES } from "@/lib/marketing-stack-templates";
+import { purgeExpiredArchivedVersions } from "@/lib/purge-expired-archives";
 import {
   migrateLegacyCopyTypesIfNeeded,
   renameNumberedStackTypeNames,
@@ -23,6 +24,7 @@ export async function getCopyTypesWithVersions(userId: string) {
   await migrateLegacyCopyTypesIfNeeded(userId);
   await renameNumberedStackTypeNames(userId);
   await ensureDefaultCopyTypes(userId);
+  await purgeExpiredArchivedVersions(userId);
 
   return prisma.copyType.findMany({
     where: { userId },

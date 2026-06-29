@@ -3,11 +3,13 @@ import { prisma } from "@/lib/db";
 
 const LEGACY_TYPE_NAMES = ["Type 1", "Type 2", "Type 3"] as const;
 
+type CopyTypeNameRow = { name: string };
+
 function isLegacyName(name: string) {
   return LEGACY_TYPE_NAMES.includes(name as (typeof LEGACY_TYPE_NAMES)[number]);
 }
 
-function isLegacyOnly(types: { name: string }[]) {
+function isLegacyOnly(types: CopyTypeNameRow[]) {
   return types.length > 0 && types.every((t) => isLegacyName(t.name));
 }
 
@@ -51,7 +53,7 @@ export async function renameNumberedStackTypeNames(userId: string) {
 export async function migrateLegacyCopyTypesIfNeeded(
   userId: string
 ): Promise<boolean> {
-  const types = await prisma.copyType.findMany({
+  const types: CopyTypeNameRow[] = await prisma.copyType.findMany({
     where: { userId },
     select: { name: true },
   });
@@ -71,14 +73,11 @@ export async function migrateLegacyCopyTypesIfNeeded(
     },
   });
 
-  const existingNames = new Set(
-    (
-      await prisma.copyType.findMany({
-        where: { userId },
-        select: { name: true },
-      })
-    ).map((t) => t.name)
-  );
+  const existingRows: CopyTypeNameRow[] = await prisma.copyType.findMany({
+    where: { userId },
+    select: { name: true },
+  });
+  const existingNames = new Set(existingRows.map((t) => t.name));
 
   const missing = MARKETING_STACK_TYPES.filter(
     (t) => !existingNames.has(t.name)

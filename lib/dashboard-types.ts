@@ -5,6 +5,7 @@ export type CopyVersionRecord = {
   typeId: string;
   title: string | null;
   content: string;
+  inUse: boolean;
   archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -25,6 +26,7 @@ export function serializeVersion(row: {
   typeId: string;
   title: string | null;
   content: string;
+  inUse: boolean;
   archivedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -34,6 +36,7 @@ export function serializeVersion(row: {
     typeId: row.typeId,
     title: row.title,
     content: row.content,
+    inUse: row.inUse ?? false,
     archivedAt: row.archivedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -52,6 +55,7 @@ export function serializeType(row: {
     typeId: string;
     title: string | null;
     content: string;
+    inUse: boolean;
     archivedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;

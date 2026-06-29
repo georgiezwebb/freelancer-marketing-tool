@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArchiveIcon, ArchiveRestoreIcon, Trash2Icon } from "lucide-react";
+import { ArchiveIcon, ArchiveRestoreIcon, StarIcon, Trash2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -10,9 +10,14 @@ import {
 } from "@/lib/marketing-stack-templates";
 
 import type { CopyVersionRecord } from "@/lib/dashboard-types";
+import {
+  ARCHIVE_RETENTION_NOTICE,
+  archiveDeletionDateIso,
+} from "@/lib/archive-retention";
 import { formatDateTime } from "@/lib/format-datetime";
 
 import { clampWritingNotes } from "@/lib/copy-limits";
+import { cn } from "@/lib/utils";
 import { isArchivedVersion } from "@/lib/version-filters";
 
 import {
@@ -23,6 +28,14 @@ import { RichTextEditor } from "./RichTextEditor";
 
 const inputClass =
   "flex min-h-9 w-full border-2 border-foreground bg-background px-2.5 py-1.5 text-sm outline-none transition-[box-shadow] focus-visible:ring-2 focus-visible:ring-ring/50";
+
+function editorContentForVersion(
+  version: CopyVersionRecord,
+  typeName: string | null
+): string {
+  if (typeName && isVersionGuideContent(typeName, version.content)) return "";
+  return version.content;
+}
 
 type NotesStatus = "idle" | "saving" | "saved" | "error";
 
@@ -42,6 +55,10 @@ type Props = {
   onSaved: (version: CopyVersionRecord) => void;
   onDeleted: (versionId: string) => void;
   onArchived: (version: CopyVersionRecord) => void;
+  onToggleInUse: (
+    versionId: string,
+    inUse: boolean
+  ) => boolean | void | Promise<boolean | void>;
 };
 
 export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
@@ -58,6 +75,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
       onSaved,
       onDeleted,
       onArchived,
+      onToggleInUse,
     },
     ref
   ) {
@@ -72,6 +90,8 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
   const [dirty, setDirty] = React.useState(false);
   const notesSaveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedNotes = React.useRef("");
+  const activeVersionIdRef = React.useRef<string | null>(version?.id ?? null);
+  activeVersionIdRef.current = version?.id ?? null;
 
   const markDirty = React.useCallback(() => {
     setDirty(true);
@@ -83,8 +103,8 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
     onDirtyChange?.(false);
   }, [onDirtyChange]);
 
-  /** Only reset version fields when switching versions — not when parent types refresh. */
-  React.useEffect(() => {
+  /** Reset fields when switching versions — useLayoutEffect so Quill mounts with correct content. */
+  React.useLayoutEffect(() => {
     if (!version) {
       setTitle("");
       setContent("");
@@ -96,11 +116,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
       return;
     }
     setTitle(version.title ?? "");
-    setContent(
-      typeName && isVersionGuideContent(typeName, version.content)
-        ? ""
-        : version.content
-    );
+    setContent(editorContentForVersion(version, typeName));
     setNotesOpen(Boolean(showNotesInitially));
     markClean();
     setError(null);
@@ -115,23 +131,28 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
   }, [version?.id, writingNotes]);
 
   const saveVersion = React.useCallback(async (): Promise<boolean> => {
-    if (!version) return true;
+    const versionId = version?.id;
+    if (!versionId) return true;
+
+    const payload = {
+      title: title.trim() || null,
+      content,
+    };
+
     setPending(true);
     setError(null);
     try {
-      const res = await fetch(`/api/copy-versions/${version.id}`, {
+      const res = await fetch(`/api/copy-versions/${versionId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim() || null,
-          content,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const j = (await res.json().catch(() => null)) as { error?: string };
         throw new Error(j?.error ?? "Save failed");
       }
       const saved = (await res.json()) as CopyVersionRecord;
+      if (activeVersionIdRef.current !== versionId) return true;
       onSaved(saved);
       markClean();
       return true;
@@ -141,7 +162,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
     } finally {
       setPending(false);
     }
-  }, [version, title, content, onSaved, markClean]);
+  }, [version?.id, title, content, onSaved, markClean]);
 
   React.useImperativeHandle(ref, () => ({ save: saveVersion }), [saveVersion]);
 
@@ -205,7 +226,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
   async function handleSetArchived(archived: boolean) {
     if (!version) return;
     const msg = archived
-      ? "Archive this version? You can restore it from the archived list."
+      ? `Archive this version? You can restore it from the archived list for up to 1 year. ${ARCHIVE_RETENTION_NOTICE}`
       : "Restore this version to your active copy?";
     if (!window.confirm(msg)) return;
     setPending(true);
@@ -258,7 +279,20 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
           ) : null}
           <p className="text-xs text-muted-foreground">
             {isArchived ? (
-              <span className="font-medium text-foreground">Archived · </span>
+              <>
+                <span className="font-medium text-foreground">Archived · </span>
+                {version.archivedAt ? (
+                  <>
+                    Deletes{" "}
+                    {formatDateTime(
+                      archiveDeletionDateIso(version.archivedAt)
+                    )}
+                    {" · "}
+                  </>
+                ) : null}
+              </>
+            ) : version.inUse ? (
+              <span className="font-medium text-amber-600">In use · </span>
             ) : null}
             Updated {formatDateTime(version.updatedAt)}
             {version.createdAt !== version.updatedAt && (
@@ -267,6 +301,29 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {!isArchived ? (
+            <Button
+              type="button"
+              variant={version.inUse ? "default" : "outline"}
+              size="sm"
+              disabled={pending}
+              onClick={async () => {
+                const ok = await onToggleInUse(version.id, !version.inUse);
+                if (ok === false) {
+                  window.alert(
+                    "Could not update. Run npm run db:push if the database schema is out of date."
+                  );
+                }
+              }}
+            >
+              <StarIcon
+                className={cn(
+                  version.inUse && "fill-amber-300 text-amber-300"
+                )}
+              />
+              {version.inUse ? "In use" : "Mark in use"}
+            </Button>
+          ) : null}
           {isArchived ? (
             <Button
               type="button"
@@ -350,8 +407,11 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
           <RichTextEditor
             key={version.id}
             id="version-content"
-            value={content}
-            onChange={setContent}
+            value={editorContentForVersion(version, typeName)}
+            onChange={(html) => {
+              if (activeVersionIdRef.current !== version.id) return;
+              setContent(html);
+            }}
             onDirty={markDirty}
             placeholder="Write your copy…"
             className="flex-1"

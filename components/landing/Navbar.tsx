@@ -23,8 +23,8 @@ import { cn } from "@/lib/utils"
 const DASHBOARD_HREF = "/dashboard" as const
 
 const navLinks = [
-  { href: "#features", label: "Features" },
-  { href: "#faq", label: "FAQ" },
+  { href: "#features", label: "What it does" },
+  { href: "#faq", label: "Notes" },
 ] as const
 
 function AuthActions({ className }: { className?: string }) {
@@ -69,7 +69,7 @@ function AuthActions({ className }: { className?: string }) {
       </SignInButton>
       <SignUpButton mode="modal" forceRedirectUrl={DASHBOARD_HREF}>
         <Button size="sm" className="shadow-md shadow-primary/15">
-          Get started
+          Try it
         </Button>
       </SignUpButton>
     </div>
@@ -223,7 +223,7 @@ function MobileAuth({ onClose }: { onClose: () => void }) {
       </SignInButton>
       <SignUpButton mode="modal" forceRedirectUrl={DASHBOARD_HREF}>
         <Button className="w-full shadow-md shadow-primary/15" onClick={() => onClose()}>
-          Get started
+          Try it
         </Button>
       </SignUpButton>
     </div>

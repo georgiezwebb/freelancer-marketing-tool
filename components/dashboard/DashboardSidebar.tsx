@@ -19,6 +19,8 @@ import {
   archivedVersions,
 } from "@/lib/version-filters";
 
+import { VersionInUseStar } from "./VersionInUseStar";
+
 const inputClass =
   "flex min-h-8 w-full border-2 border-foreground bg-background px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50";
 
@@ -30,6 +32,10 @@ type Props = {
   onSelectVersion: (versionId: string, typeId: string) => void;
   onTypesChange: (types: CopyTypeRecord[]) => void;
   onCreateVersion: (typeId: string) => void;
+  onToggleInUse: (
+    versionId: string,
+    inUse: boolean
+  ) => boolean | void | Promise<boolean | void>;
   createVersionPending?: boolean;
 };
 
@@ -41,6 +47,7 @@ export function DashboardSidebar({
   onSelectVersion,
   onTypesChange,
   onCreateVersion,
+  onToggleInUse,
   createVersionPending = false,
 }: Props) {
   const [addingType, setAddingType] = React.useState(false);
@@ -130,18 +137,28 @@ export function DashboardSidebar({
                   isActiveSection && "border-l-4 border-primary pl-0.5"
                 )}
               >
-                <div className="flex items-stretch gap-0.5">
+                <div
+                  className={cn(
+                    "flex items-stretch overflow-hidden border-2 transition-[border-color,background-color,box-shadow]",
+                    isActiveSection
+                      ? "border-foreground bg-background shadow-sm"
+                      : "border-transparent hover:border-foreground/30 hover:bg-background/60"
+                  )}
+                >
                   <button
                     type="button"
                     aria-label={expanded ? "Collapse" : "Expand"}
                     aria-expanded={expanded}
                     onClick={() => toggleExpanded(type.id)}
-                    className="flex size-8 shrink-0 items-center justify-center border-2 border-transparent hover:border-foreground/30 hover:bg-background/60"
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center border-r border-foreground/10 transition-colors",
+                      "hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
+                    )}
                   >
                     {expanded ? (
-                      <ChevronDownIcon className="size-4" />
+                      <ChevronDownIcon className="size-4 opacity-80" />
                     ) : (
-                      <ChevronRightIcon className="size-4" />
+                      <ChevronRightIcon className="size-4 opacity-80" />
                     )}
                   </button>
                   <button
@@ -152,10 +169,11 @@ export function DashboardSidebar({
                       onSelectType(type.id);
                     }}
                     className={cn(
-                      "flex min-w-0 flex-1 items-center gap-2 border-2 px-2 py-1.5 text-left text-sm transition-colors",
+                      "flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-sm transition-colors",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
                       isActiveSection
-                        ? "border-foreground bg-background font-semibold text-foreground shadow-sm"
-                        : "border-transparent hover:border-foreground/30 hover:bg-background/60"
+                        ? "font-semibold text-foreground"
+                        : "text-foreground/90"
                     )}
                   >
                     <FolderIcon
@@ -166,17 +184,21 @@ export function DashboardSidebar({
                     />
                     <span className="truncate">{type.name}</span>
                   </button>
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    size="icon-xs"
-                    className="shrink-0"
                     aria-label={`Add version to ${type.name}`}
                     disabled={busy}
                     onClick={() => onCreateVersion(type.id)}
+                    className={cn(
+                      "flex w-8 shrink-0 items-center justify-center border-l border-foreground/10 transition-[color,opacity,background-color]",
+                      "text-muted-foreground/55 hover:bg-muted/40 hover:text-foreground",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
+                      "disabled:pointer-events-none disabled:opacity-40",
+                      isActiveSection && "text-primary/70 hover:text-primary"
+                    )}
                   >
-                    <PlusIcon />
-                  </Button>
+                    <PlusIcon className="size-3.5 stroke-[2.25]" aria-hidden />
+                  </button>
                 </div>
 
                 {expanded ? (
@@ -196,24 +218,36 @@ export function DashboardSidebar({
                     ) : (
                       active.map((version) => (
                         <li key={version.id}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              expandOnly(type.id);
-                              onSelectVersion(version.id, type.id);
-                            }}
+                          <div
                             className={cn(
-                              "flex w-full items-center gap-2 border-2 border-transparent px-2 py-1.5 text-left text-xs transition-colors",
+                              "flex w-full items-center gap-1 border-2 border-transparent pr-1 transition-colors",
                               selectedVersionId === version.id
                                 ? "border-foreground bg-background font-medium"
                                 : "hover:border-foreground/30 hover:bg-background/60"
                             )}
                           >
-                            <FileTextIcon className="size-3.5 shrink-0 opacity-70" />
-                            <span className="truncate">
-                              {version.title?.trim() || "Untitled"}
-                            </span>
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                expandOnly(type.id);
+                                onSelectVersion(version.id, type.id);
+                              }}
+                              className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-xs"
+                            >
+                              <FileTextIcon className="size-3.5 shrink-0 opacity-70" />
+                              <span className="truncate">
+                                {version.title?.trim() || "Untitled"}
+                              </span>
+                            </button>
+                            <VersionInUseStar
+                              size="sm"
+                              inUse={version.inUse}
+                              disabled={busy}
+                              onToggle={(next) =>
+                                onToggleInUse(version.id, next)
+                              }
+                            />
+                          </div>
                         </li>
                       ))
                     )}

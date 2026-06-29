@@ -1,7 +1,7 @@
 import {
-  CalendarDaysIcon,
+  BookOpenIcon,
   FolderKanbanIcon,
-  MessagesSquareIcon,
+  LayersIcon,
 } from "lucide-react"
 
 import {
@@ -16,24 +16,24 @@ import { cn } from "@/lib/utils"
 const items = [
   {
     icon: FolderKanbanIcon,
-    title: "Copy library",
+    title: "Different copy types",
     accent: "from-primary/25 via-primary/10 to-accent/35",
     description:
-      "Save taglines, case-study blurbs, and service descriptions with labels so you can reuse the right message for each channel.",
+      "I created a basic marketing stack for beginers, inspired by AI e.g. positioning, LinkedIn, email intros, case studies, etc. Either work through this or create your own stack.",
   },
   {
-    icon: CalendarDaysIcon,
-    title: "Simple marketing plan",
+    icon: LayersIcon,
+    title: "Versioning",
     accent: "from-chart-2/30 via-primary/10 to-muted",
     description:
-      "Outline what to post, send, or pitch each week, without a spreadsheet degree. Adjust as client work shifts.",
+      "Save a new draft without overwriting the last one. Archive old copy and see which version you're currently using.",
   },
   {
-    icon: MessagesSquareIcon,
-    title: "Channel-ready snippets",
+    icon: BookOpenIcon,
+    title: "Optional advice and help from AI",
     accent: "from-accent/40 via-primary/15 to-secondary",
     description:
-      "Keep LinkedIn hooks, email intros, and portfolio blurbs in sync so your voice stays consistent everywhere.",
+      "Each type comes with short writing notes and space for your own reminders as you refine the copy. A bot is wired in for inspiration and guidance if you run out of ideas.",
   },
 ] as const
 
@@ -54,12 +54,8 @@ export function Features() {
             id="features-heading"
             className="font-heading text-3xl font-semibold tracking-tight text-foreground sm:text-4xl md:text-[2.5rem] md:leading-tight"
           >
-            Everything you need to sound clear, not busy
+            Features
           </h2>
-          <p className="mt-4 text-muted-foreground sm:text-lg">
-            One workspace for the words you repeat and the plan that keeps your
-            marketing moving.
-          </p>
         </div>
         <ul className="mt-12 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {items.map(({ icon: Icon, title, description, accent }) => (

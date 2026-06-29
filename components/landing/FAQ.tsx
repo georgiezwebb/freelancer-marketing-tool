@@ -12,25 +12,25 @@ const faqs = [
     id: "what-is",
     question: "What is PitchKit?",
     answer:
-      "PitchKit is a lightweight tool for freelancers to store reusable marketing copy and sketch a simple weekly or monthly marketing plan, so you spend less time rewriting and more time on client work.",
+      "A capstone portfolio project: a working web app for storing marketing and sales copy, tracking versions, and getting unstuck with short per-type writing notes. I built it for my own messy workflow, then polished it enough to ship.",
   },
   {
     id: "who-for",
     question: "Who is it for?",
     answer:
-      "Solo freelancers and small studios who juggle their own marketing alongside billable work: designers, developers, writers, and consultants who want one place for their go-to messaging.",
+      "Mostly freelancers and solo builders who write their own pitches, bios, and outreach — and who are tired of maintaining the same sentences in five different places.",
   },
   {
-    id: "copy-vs-plan",
-    question: "How do copy storage and the plan work together?",
+    id: "versions",
+    question: "How do versions work?",
     answer:
-      "Your library is the source of truth for snippets and blurbs. The plan layer helps you decide when and where to use them, without losing them in Notion pages or random docs.",
+      "Each copy type (say, LinkedIn profile or positioning statement) can hold multiple versions. You pick one to edit, save drafts as you go, archive old ones, and see at a glance what's still in play.",
   },
   {
-    id: "pricing",
-    question: "Is there a free tier?",
+    id: "ai",
+    question: "Does it write copy for you?",
     answer:
-      "We’re focusing on the landing experience first. Pricing and accounts will follow. Check back soon or join the waitlist when we open sign-ups.",
+      "It can if you want. The built-in guides are plain prompts and checklists to simplify the writing process, but an AI is wired in and can be used simply for inspiration, advice or complete copy, if you need it.",
   },
 ] as const
 
@@ -46,11 +46,10 @@ export function FAQ() {
           id="faq-heading"
           className="text-center font-heading text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
         >
-          Frequently asked questions
+          A few notes
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-center text-muted-foreground sm:text-lg">
-          Quick answers about the product direction. More detail will land as the
-          app grows.
+          Context on what this is — and what it isn&apos;t.
         </p>
         <div className="mt-10 rounded-2xl border border-primary/10 bg-card/60 p-1 shadow-sm ring-1 ring-border/60 backdrop-blur-md sm:p-2">
           <Accordion multiple className="w-full px-2 sm:px-4">

@@ -7,6 +7,21 @@ import { serializeVersion } from "@/lib/dashboard-types";
 
 type Params = Promise<{ id: string }>;
 
+export async function GET(_request: Request, { params }: { params: Params }) {
+  const user = await getOrCreateAppUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const existing = await getOwnedCopyVersion(user.id, id);
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  return NextResponse.json(serializeVersion(existing));
+}
+
 export async function PATCH(request: Request, { params }: { params: Params }) {
   const user = await getOrCreateAppUser();
   if (!user) {
@@ -30,11 +45,12 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
-  const { title, content, archived } = body as Record<string, unknown>;
+  const { title, content, archived, inUse } = body as Record<string, unknown>;
   const data: {
     title?: string | null;
     content?: string;
     archivedAt?: Date | null;
+    inUse?: boolean;
   } = {};
 
   if ("title" in body) {
@@ -54,18 +70,54 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
       );
     }
     data.archivedAt = archived ? new Date() : null;
+    if (archived) {
+      data.inUse = false;
+    }
+  }
+  if ("inUse" in body) {
+    if (typeof inUse !== "boolean") {
+      return NextResponse.json(
+        { error: "inUse must be a boolean" },
+        { status: 400 }
+      );
+    }
+    if (existing.archivedAt && inUse) {
+      return NextResponse.json(
+        { error: "Cannot mark archived copy as in use" },
+        { status: 400 }
+      );
+    }
+    data.inUse = inUse;
   }
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "No valid fields" }, { status: 400 });
   }
 
-  const version = await prisma.copyVersion.update({
-    where: { id },
-    data,
-  });
+  try {
+    if (data.inUse === true) {
+      await prisma.copyVersion.updateMany({
+        where: { typeId: existing.typeId, id: { not: id } },
+        data: { inUse: false },
+      });
+    }
 
-  return NextResponse.json(serializeVersion(version));
+    const version = await prisma.copyVersion.update({
+      where: { id },
+      data,
+    });
+
+    return NextResponse.json(serializeVersion(version));
+  } catch (err) {
+    console.error("copy-version PATCH failed:", err);
+    return NextResponse.json(
+      {
+        error:
+          "Could not update version. If you just added the star feature, run npm run db:push.",
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function DELETE(

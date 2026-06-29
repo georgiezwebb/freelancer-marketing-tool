@@ -26,7 +26,7 @@ export function Hero() {
       />
       <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 py-20 text-center sm:px-6 sm:py-24 md:py-28">
         <p className="motion-safe:fade-up mb-6 text-xs font-semibold uppercase tracking-[0.2em] text-foreground">
-          Built for freelancers
+          Portfolio project
         </p>
         <h1
           id="hero-heading"
@@ -36,30 +36,29 @@ export function Hero() {
             lineHeight: 1.08,
           }}
         >
-          Your marketing copy, organized.{" "}
-          <span className="text-gradient-hero">Your next launch, planned.</span>
+          <span className="text-gradient-hero">A place for marketing text.</span>
         </h1>
         <p className="motion-safe:fade-up motion-safe:fade-up-delay-2 mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg">
-          Store bios, pitches, social posts, and email snippets in one place,
-          then turn them into a clear marketing plan.
+          This app is an easy way to store and manage sales and marketing copy. It groups by type, offers a few prompts when you&apos;re
+          stuck, and keeps versions so you can see what you're currently using.
         </p>
         <div className="motion-safe:fade-up motion-safe:fade-up-delay-3 mt-10 flex w-full flex-col items-stretch justify-center gap-3 sm:mt-12 sm:w-auto sm:flex-row sm:items-center">
           <Button
             size="lg"
             className="min-h-10 px-7 shadow-lg shadow-primary/20"
             nativeButton={false}
-            render={<Link href="#features" />}
+            render={<Link href="/dashboard" />}
           >
-            Explore features
+            Try the dashboard
           </Button>
           <Button
             variant="outline"
             size="lg"
             className="min-h-10 bg-background/65 px-7 backdrop-blur-sm hover:bg-accent/45"
             nativeButton={false}
-            render={<Link href="#faq" />}
+            render={<Link href="#features" />}
           >
-            How it works
+            What it does
           </Button>
         </div>
       </div>
