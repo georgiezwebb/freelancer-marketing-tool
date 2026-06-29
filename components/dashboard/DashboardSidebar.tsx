@@ -37,6 +37,8 @@ type Props = {
     inUse: boolean
   ) => boolean | void | Promise<boolean | void>;
   createVersionPending?: boolean;
+  className?: string;
+  onNavigate?: () => void;
 };
 
 export function DashboardSidebar({
@@ -49,6 +51,8 @@ export function DashboardSidebar({
   onCreateVersion,
   onToggleInUse,
   createVersionPending = false,
+  className,
+  onNavigate,
 }: Props) {
   const [addingType, setAddingType] = React.useState(false);
   const [newTypeName, setNewTypeName] = React.useState("");
@@ -102,7 +106,7 @@ export function DashboardSidebar({
       const type = (await res.json()) as CopyTypeRecord;
       onTypesChange([...types, type]);
       expandOnly(type.id);
-      onSelectType(type.id);
+      selectType(type.id);
       setNewTypeName("");
       setAddingType(false);
     } finally {
@@ -112,8 +116,23 @@ export function DashboardSidebar({
 
   const busy = pending || createVersionPending;
 
+  function selectType(typeId: string) {
+    onSelectType(typeId);
+    onNavigate?.();
+  }
+
+  function selectVersion(versionId: string, typeId: string) {
+    onSelectVersion(versionId, typeId);
+    onNavigate?.();
+  }
+
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-r-2 border-foreground/10 bg-muted/15">
+    <aside
+      className={cn(
+        "flex h-full w-80 shrink-0 flex-col border-r-2 border-foreground/10 bg-muted/15",
+        className
+      )}
+    >
       <div className="border-b border-foreground/10 px-3 py-3">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Marketing stack
@@ -166,7 +185,7 @@ export function DashboardSidebar({
                     aria-current={isActiveSection ? "true" : undefined}
                     onClick={() => {
                       expandOnly(type.id);
-                      onSelectType(type.id);
+                      selectType(type.id);
                     }}
                     className={cn(
                       "flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-sm transition-colors",
@@ -230,7 +249,7 @@ export function DashboardSidebar({
                               type="button"
                               onClick={() => {
                                 expandOnly(type.id);
-                                onSelectVersion(version.id, type.id);
+                                selectVersion(version.id, type.id);
                               }}
                               className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-xs"
                             >
@@ -274,7 +293,7 @@ export function DashboardSidebar({
                                 type="button"
                                 onClick={() => {
                                   expandOnly(type.id);
-                                  onSelectVersion(version.id, type.id);
+                                  selectVersion(version.id, type.id);
                                 }}
                                 className={cn(
                                   "mt-0.5 flex w-full items-center gap-2 border-2 border-transparent px-2 py-1.5 text-left text-[11px] text-muted-foreground transition-colors",

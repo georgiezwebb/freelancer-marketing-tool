@@ -4,11 +4,17 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { ArchiveIcon } from "lucide-react";
+import { ArchiveIcon, PanelLeftIcon } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import type { CopyTypeRecord, CopyVersionRecord } from "@/lib/dashboard-types";
 import { activeVersions, allArchivedVersions } from "@/lib/version-filters";
 import { ARCHIVE_RETENTION_NOTICE } from "@/lib/archive-retention";
@@ -57,6 +63,7 @@ export function DashboardClient({ initialTypes }: Props) {
   const [viewMode, setViewMode] = React.useState<"library" | "archived">(
     "library"
   );
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
   const selectedType = types.find((t) => t.id === selectedTypeId) ?? null;
   const archivedCount = allArchivedVersions(types).length;
@@ -196,6 +203,7 @@ export function DashboardClient({ initialTypes }: Props) {
     setSelectedVersionId(version.id);
     setOpenNotesForVersionId(version.id);
     setVersionDirty(false);
+    setSidebarOpen(false);
   }
 
   function handleWritingNotesSaved(typeId: string, notes: string) {
@@ -296,6 +304,13 @@ export function DashboardClient({ initialTypes }: Props) {
     handleVersionsDeleted([versionId]);
   }
 
+  function handleBackToVersions() {
+    guardNavigation(() => {
+      setSelectedVersionId(null);
+      setOpenNotesForVersionId(null);
+    });
+  }
+
   function handleHomeClick(e: React.MouseEvent<HTMLAnchorElement>) {
     if (!needsSavePrompt) return;
     e.preventDefault();
@@ -305,21 +320,34 @@ export function DashboardClient({ initialTypes }: Props) {
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">
       <header className="z-20 shrink-0 border-b-2 border-foreground/10 bg-background/90 backdrop-blur-sm">
-        <div className="flex items-center justify-between gap-4 px-4 py-3">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              className="shrink-0 md:hidden"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sections menu"
+            >
+              <PanelLeftIcon />
+            </Button>
             <Link
               href="/"
               onClick={handleHomeClick}
-              className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              className="shrink-0 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
             >
               ← Home
             </Link>
-            <Separator orientation="vertical" className="h-6" />
-            <h1 className="font-heading text-base font-semibold tracking-tight md:text-lg">
+            <Separator
+              orientation="vertical"
+              className="hidden h-6 sm:block"
+            />
+            <h1 className="truncate font-heading text-sm font-semibold tracking-tight sm:text-base md:text-lg">
               Copy library
             </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <Button
               type="button"
               variant={viewMode === "archived" ? "default" : "outline"}
@@ -327,10 +355,19 @@ export function DashboardClient({ initialTypes }: Props) {
               onClick={handleToggleArchivedView}
               aria-pressed={viewMode === "archived"}
               title={ARCHIVE_RETENTION_NOTICE}
+              className="px-2 sm:px-2.5"
             >
               <ArchiveIcon />
-              Archived
-              {archivedCount > 0 ? ` (${archivedCount})` : ""}
+              <span className="hidden min-[380px]:inline">Archived</span>
+              {archivedCount > 0 ? (
+                <>
+                  <span className="min-[380px]:hidden">{archivedCount}</span>
+                  <span className="hidden min-[380px]:inline">
+                    {" "}
+                    ({archivedCount})
+                  </span>
+                </>
+              ) : null}
             </Button>
             <UserButton
               appearance={{
@@ -341,7 +378,31 @@ export function DashboardClient({ initialTypes }: Props) {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetContent
+          side="left"
+          className="w-[min(100vw,20rem)] gap-0 p-0"
+        >
+          <SheetHeader className="border-b border-foreground/10 px-4 py-3 text-left">
+            <SheetTitle>Sections</SheetTitle>
+          </SheetHeader>
+          <DashboardSidebar
+            types={types}
+            selectedTypeId={selectedTypeId}
+            selectedVersionId={selectedVersionId}
+            onSelectType={handleSelectType}
+            onSelectVersion={handleSelectVersion}
+            onTypesChange={setTypes}
+            onCreateVersion={handleCreateVersion}
+            onToggleInUse={handleToggleInUse}
+            createVersionPending={createVersionPending}
+            className="h-[calc(100%-3.25rem)] w-full border-r-0"
+            onNavigate={() => setSidebarOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
+
+      <div className="flex min-h-0 min-w-0 flex-1">
         <DashboardSidebar
           types={types}
           selectedTypeId={selectedTypeId}
@@ -352,7 +413,9 @@ export function DashboardClient({ initialTypes }: Props) {
           onCreateVersion={handleCreateVersion}
           onToggleInUse={handleToggleInUse}
           createVersionPending={createVersionPending}
+          className="hidden md:flex"
         />
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {viewMode === "archived" ? (
           <ArchivedVersionsPanel
             types={types}
@@ -375,6 +438,7 @@ export function DashboardClient({ initialTypes }: Props) {
             onDeleted={handleVersionDeleted}
             onArchived={handleVersionArchived}
             onToggleInUse={handleToggleInUse}
+            onBackToVersions={handleBackToVersions}
           />
         ) : selectedType ? (
           <VersionCardsGrid
@@ -388,12 +452,19 @@ export function DashboardClient({ initialTypes }: Props) {
             onToggleInUse={handleToggleInUse}
           />
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center sm:px-8">
             <p className="max-w-md text-sm text-muted-foreground">
-              Select a section on the left to view your copy versions.
+              <span className="md:hidden">
+                Open the menu to pick a section, then select or add a version to
+                edit.
+              </span>
+              <span className="hidden md:inline">
+                Select a section on the left to view your copy versions.
+              </span>
             </p>
           </div>
         )}
+        </main>
       </div>
 
       <UnsavedChangesDialog

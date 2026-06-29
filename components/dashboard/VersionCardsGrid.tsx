@@ -55,7 +55,7 @@ export function VersionCardsGrid({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="border-b border-foreground/10 px-6 py-4">
+      <div className="border-b border-foreground/10 px-4 py-4 sm:px-6">
         <p className="inline-block border-2 border-foreground bg-muted/30 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-foreground">
           {type.name}
         </p>
@@ -68,7 +68,7 @@ export function VersionCardsGrid({
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
         <ul
           className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
           aria-label={`Versions for ${type.name}`}

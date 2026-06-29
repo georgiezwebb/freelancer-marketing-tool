@@ -37,6 +37,12 @@ type ActiveFormats = {
   strike: boolean;
 };
 
+const toolbarSelectClassName =
+  "h-10 min-w-[7.25rem] shrink-0 border-2 border-foreground bg-background px-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:min-w-[7.75rem]";
+
+const toolbarButtonClassName =
+  "flex size-10 shrink-0 items-center justify-center border-2 transition-colors disabled:opacity-50";
+
 const EMPTY_FORMATS: ActiveFormats = {
   bold: false,
   italic: false,
@@ -219,7 +225,7 @@ export function RichTextEditor({
         role="toolbar"
         aria-label="Formatting"
         className={cn(
-          "flex flex-wrap items-center gap-1 border-2 border-b-0 border-foreground bg-muted/30 px-2 py-1.5",
+          "flex flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain border-2 border-b-0 border-foreground bg-muted/30 px-2.5 py-2.5 [-webkit-overflow-scrolling:touch] sm:gap-2.5 sm:px-3 sm:py-3",
           !ready && "pointer-events-none opacity-60"
         )}
         onMouseDownCapture={captureSelection}
@@ -231,7 +237,7 @@ export function RichTextEditor({
       >
         <select
           aria-label="Font"
-          className="h-7 max-w-[6.5rem] border-2 border-foreground bg-background px-1.5 text-xs outline-none"
+          className={toolbarSelectClassName}
           value={fontValue}
           disabled={!ready}
           onChange={(e) => {
@@ -247,7 +253,7 @@ export function RichTextEditor({
         </select>
         <select
           aria-label="Font size"
-          className="h-7 max-w-[6.5rem] border-2 border-foreground bg-background px-1.5 text-xs outline-none"
+          className={toolbarSelectClassName}
           value={sizeValue}
           disabled={!ready}
           onChange={(e) => {
@@ -260,14 +266,14 @@ export function RichTextEditor({
             </option>
           ))}
         </select>
-        <span className="mx-0.5 h-5 w-px bg-foreground/20" aria-hidden />
+        <span className="mx-0.5 h-6 w-px shrink-0 bg-foreground/20" aria-hidden />
         <ToolbarButton
           label="Bold"
           active={activeFormats.bold}
           disabled={!ready}
           onClick={() => toggleFormat("bold")}
         >
-          <BoldIcon className="size-3.5" />
+          <BoldIcon className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label="Italic"
@@ -275,7 +281,7 @@ export function RichTextEditor({
           disabled={!ready}
           onClick={() => toggleFormat("italic")}
         >
-          <ItalicIcon className="size-3.5" />
+          <ItalicIcon className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label="Underline"
@@ -283,7 +289,7 @@ export function RichTextEditor({
           disabled={!ready}
           onClick={() => toggleFormat("underline")}
         >
-          <UnderlineIcon className="size-3.5" />
+          <UnderlineIcon className="size-4" />
         </ToolbarButton>
         <ToolbarButton
           label="Strikethrough"
@@ -291,13 +297,13 @@ export function RichTextEditor({
           disabled={!ready}
           onClick={() => toggleFormat("strike")}
         >
-          <StrikethroughIcon className="size-3.5" />
+          <StrikethroughIcon className="size-4" />
         </ToolbarButton>
       </div>
       <div
         id={id}
         ref={containerRef}
-        className="pitchkit-quill__surface min-h-[min(60vh,28rem)] flex-1 border-2 border-foreground bg-background"
+        className="pitchkit-quill__surface min-h-[min(42vh,18rem)] flex-1 border-2 border-foreground bg-background sm:min-h-[min(60vh,28rem)]"
         aria-label="Content"
         aria-busy={!ready}
       />
@@ -327,7 +333,7 @@ function ToolbarButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex size-7 items-center justify-center border-2 transition-colors disabled:opacity-50",
+        toolbarButtonClassName,
         active
           ? "border-foreground bg-background text-foreground shadow-sm"
           : "border-transparent text-muted-foreground hover:border-foreground/30 hover:bg-background hover:text-foreground"
