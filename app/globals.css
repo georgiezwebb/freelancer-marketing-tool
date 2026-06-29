@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "quill/dist/quill.core.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -221,4 +222,58 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/* Quill — match dashboard brutalist chrome */
+.pitchkit-quill .ql-toolbar {
+  display: none;
+}
+
+.pitchkit-quill .pitchkit-quill__surface.ql-container.ql-snow {
+  border: 2px solid var(--foreground);
+  font-family: inherit;
+  font-size: inherit;
+  background: var(--background);
+}
+
+.pitchkit-quill .ql-editor {
+  min-height: min(60vh, 28rem);
+  padding: 0.5rem 0.625rem;
+  font-size: 1rem;
+  line-height: 1.625;
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.pitchkit-quill .ql-editor.ql-blank::before {
+  left: 0.625rem;
+  right: 0.625rem;
+  color: var(--muted-foreground);
+  font-style: normal;
+}
+
+.pitchkit-quill .ql-editor p {
+  margin-bottom: 0.5rem;
+}
+
+.pitchkit-quill .ql-editor p:last-child {
+  margin-bottom: 0;
+}
+
+.pitchkit-quill .ql-font-sans {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.pitchkit-quill .ql-font-serif {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.pitchkit-quill .ql-font-mono {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+.pitchkit-quill__surface:focus-within,
+.pitchkit-quill .pitchkit-quill__surface.ql-container:focus-within {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring) 50%, transparent);
 }

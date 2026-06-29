@@ -16,24 +16,24 @@ import { cn } from "@/lib/utils"
 const items = [
   {
     icon: FolderKanbanIcon,
-    title: "Copy, grouped by job",
+    title: "Different copy types",
     accent: "from-primary/25 via-primary/10 to-accent/35",
     description:
-      "Positioning, LinkedIn, email intros, case studies — the usual suspects, already sorted. Less hunting through Notion pages and old Google Docs.",
+      "I created a basic marketing stack for beginers, inspired by AI e.g. positioning, LinkedIn, email intros, case studies, etc. Either work through this or create your own stack.",
   },
   {
     icon: LayersIcon,
-    title: "Versions you can tell apart",
+    title: "Versioning",
     accent: "from-chart-2/30 via-primary/10 to-muted",
     description:
-      "Save a new draft without overwriting the last one. Archive what didn't land and keep a clear view of which version you're running with.",
+      "Save a new draft without overwriting the last one. Archive old copy and see which version you're currently using.",
   },
   {
     icon: BookOpenIcon,
-    title: "A nudge when you're stuck",
+    title: "Optional advice and help from AI",
     accent: "from-accent/40 via-primary/15 to-secondary",
     description:
-      "Each type comes with short writing notes — what to cover, what to skip — plus space for your own reminders as you refine the copy.",
+      "Each type comes with short writing notes and space for your own reminders as you refine the copy. A bot is wired in for inspiration and guidance if you run out of ideas.",
   },
 ] as const
 
@@ -54,12 +54,8 @@ export function Features() {
             id="features-heading"
             className="font-heading text-3xl font-semibold tracking-tight text-foreground sm:text-4xl md:text-[2.5rem] md:leading-tight"
           >
-            What it actually does
+            Features
           </h2>
-          <p className="mt-4 text-muted-foreground sm:text-lg">
-            Not a content calendar or an AI writer — just a tidy shelf for the
-            words you reuse, with enough structure to make writing them easier.
-          </p>
         </div>
         <ul className="mt-12 grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {items.map(({ icon: Icon, title, description, accent }) => (

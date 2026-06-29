@@ -4,12 +4,16 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { ArchiveIcon } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { CopyTypeRecord, CopyVersionRecord } from "@/lib/dashboard-types";
-import { activeVersions } from "@/lib/version-filters";
+import { activeVersions, allArchivedVersions } from "@/lib/version-filters";
+import { ARCHIVE_RETENTION_NOTICE } from "@/lib/archive-retention";
 
+import { ArchivedVersionsPanel } from "./ArchivedVersionsPanel";
 import { CopyEditor, type CopyEditorHandle } from "./CopyEditor";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { UnsavedChangesDialog } from "./UnsavedChangesDialog";
@@ -50,8 +54,12 @@ export function DashboardClient({ initialTypes }: Props) {
   const [unsavedDialogOpen, setUnsavedDialogOpen] = React.useState(false);
   const [unsavedSaving, setUnsavedSaving] = React.useState(false);
   const [createVersionPending, setCreateVersionPending] = React.useState(false);
+  const [viewMode, setViewMode] = React.useState<"library" | "archived">(
+    "library"
+  );
 
   const selectedType = types.find((t) => t.id === selectedTypeId) ?? null;
+  const archivedCount = allArchivedVersions(types).length;
   const selectedVersion = findVersion(types, selectedVersionId);
 
   const versionDirtyRef = React.useRef(versionDirty);
@@ -119,11 +127,35 @@ export function DashboardClient({ initialTypes }: Props) {
   }
 
   function handleSelectVersion(versionId: string, typeId: string) {
-    if (versionId === selectedVersionId && typeId === selectedTypeId) return;
+    if (
+      viewMode === "library" &&
+      versionId === selectedVersionId &&
+      typeId === selectedTypeId
+    ) {
+      return;
+    }
     guardNavigation(() => {
-      setSelectedTypeId(typeId);
-      setSelectedVersionId(versionId);
-      setOpenNotesForVersionId(null);
+      void (async () => {
+        try {
+          const res = await fetch(`/api/copy-versions/${versionId}`);
+          if (res.ok) {
+            const fresh = (await res.json()) as CopyVersionRecord;
+            mergeVersionIntoTypes(fresh);
+          }
+        } catch {
+          // Fall back to cached client state if refresh fails.
+        }
+        setViewMode("library");
+        setSelectedTypeId(typeId);
+        setSelectedVersionId(versionId);
+        setOpenNotesForVersionId(null);
+      })();
+    });
+  }
+
+  function handleToggleArchivedView() {
+    guardNavigation(() => {
+      setViewMode((current) => (current === "archived" ? "library" : "archived"));
     });
   }
 
@@ -205,18 +237,63 @@ export function DashboardClient({ initialTypes }: Props) {
     setVersionDirty(false);
   }
 
-  function handleVersionDeleted(versionId: string) {
+  async function handleToggleInUse(
+    versionId: string,
+    inUse: boolean
+  ): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/copy-versions/${versionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inUse }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        console.error(body?.error ?? "Could not update in-use status");
+        return false;
+      }
+      const version = (await res.json()) as CopyVersionRecord;
+      setTypes((prev) =>
+        prev.map((t) =>
+          t.id === version.typeId
+            ? {
+                ...t,
+                versions: t.versions.map((v) => {
+                  if (v.id === version.id) return version;
+                  if (version.inUse) return { ...v, inUse: false };
+                  return v;
+                }),
+              }
+            : t
+        )
+      );
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  }
+
+  function handleVersionsDeleted(versionIds: string[]) {
+    if (versionIds.length === 0) return;
+    const idSet = new Set(versionIds);
     setTypes((prev) => {
       const next = prev.map((t) => ({
         ...t,
-        versions: t.versions.filter((v) => v.id !== versionId),
+        versions: t.versions.filter((v) => !idSet.has(v.id)),
       }));
       setSelectedVersionId((current) =>
-        current === versionId ? null : current
+        current && idSet.has(current) ? null : current
       );
       return next;
     });
     setVersionDirty(false);
+  }
+
+  function handleVersionDeleted(versionId: string) {
+    handleVersionsDeleted([versionId]);
   }
 
   function handleHomeClick(e: React.MouseEvent<HTMLAnchorElement>) {
@@ -242,11 +319,25 @@ export function DashboardClient({ initialTypes }: Props) {
               Copy library
             </h1>
           </div>
-          <UserButton
-            appearance={{
-              elements: { avatarBox: "size-8 rounded-none" },
-            }}
-          />
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant={viewMode === "archived" ? "default" : "outline"}
+              size="sm"
+              onClick={handleToggleArchivedView}
+              aria-pressed={viewMode === "archived"}
+              title={ARCHIVE_RETENTION_NOTICE}
+            >
+              <ArchiveIcon />
+              Archived
+              {archivedCount > 0 ? ` (${archivedCount})` : ""}
+            </Button>
+            <UserButton
+              appearance={{
+                elements: { avatarBox: "size-8 rounded-none" },
+              }}
+            />
+          </div>
         </div>
       </header>
 
@@ -259,9 +350,17 @@ export function DashboardClient({ initialTypes }: Props) {
           onSelectVersion={handleSelectVersion}
           onTypesChange={setTypes}
           onCreateVersion={handleCreateVersion}
+          onToggleInUse={handleToggleInUse}
           createVersionPending={createVersionPending}
         />
-        {selectedVersion ? (
+        {viewMode === "archived" ? (
+          <ArchivedVersionsPanel
+            types={types}
+            selectedVersionId={selectedVersionId}
+            onSelectVersion={handleSelectVersion}
+            onDeleteVersions={handleVersionsDeleted}
+          />
+        ) : selectedVersion ? (
           <CopyEditor
             ref={editorRef}
             version={selectedVersion}
@@ -275,6 +374,7 @@ export function DashboardClient({ initialTypes }: Props) {
             onSaved={handleVersionSaved}
             onDeleted={handleVersionDeleted}
             onArchived={handleVersionArchived}
+            onToggleInUse={handleToggleInUse}
           />
         ) : selectedType ? (
           <VersionCardsGrid
@@ -285,6 +385,7 @@ export function DashboardClient({ initialTypes }: Props) {
               handleSelectVersion(versionId, selectedType.id)
             }
             onCreateVersion={() => handleCreateVersion(selectedType.id)}
+            onToggleInUse={handleToggleInUse}
           />
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">

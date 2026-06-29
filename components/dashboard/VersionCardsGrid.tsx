@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { CopyTypeRecord, CopyVersionRecord } from "@/lib/dashboard-types";
+import { ARCHIVE_RETENTION_NOTICE } from "@/lib/archive-retention";
 import { formatDateTime } from "@/lib/format-datetime";
 import { stripHtmlToText } from "@/lib/html-content";
 import { isVersionGuideContent } from "@/lib/marketing-stack-templates";
@@ -19,6 +20,8 @@ import {
   activeVersions,
   archivedVersions,
 } from "@/lib/version-filters";
+
+import { VersionInUseStar } from "./VersionInUseStar";
 
 function contentPreview(content: string, max = 120): string {
   const text = stripHtmlToText(content);
@@ -32,6 +35,10 @@ type Props = {
   pending?: boolean;
   onSelectVersion: (versionId: string) => void;
   onCreateVersion: () => void;
+  onToggleInUse: (
+    versionId: string,
+    inUse: boolean
+  ) => boolean | void | Promise<boolean | void>;
 };
 
 export function VersionCardsGrid({
@@ -40,6 +47,7 @@ export function VersionCardsGrid({
   pending = false,
   onSelectVersion,
   onCreateVersion,
+  onToggleInUse,
 }: Props) {
   const active = activeVersions(type.versions);
   const archived = archivedVersions(type.versions);
@@ -55,7 +63,8 @@ export function VersionCardsGrid({
           Choose copy to edit
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Pick a version below or start a new one.
+          Pick a version below or start a new one. Star the copy you&apos;re
+          currently using.
         </p>
       </div>
 
@@ -72,6 +81,7 @@ export function VersionCardsGrid({
                 selected={selectedVersionId === version.id}
                 disabled={pending}
                 onSelect={() => onSelectVersion(version.id)}
+                onToggleInUse={onToggleInUse}
               />
             </li>
           ))}
@@ -91,7 +101,11 @@ export function VersionCardsGrid({
               {showArchived ? "Hide" : "Show"} archived ({archived.length})
             </button>
             {showArchived ? (
-              <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <>
+                <p className="mt-2 max-w-xl text-xs text-muted-foreground">
+                  {ARCHIVE_RETENTION_NOTICE}
+                </p>
+                <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {archived.map((version) => (
                   <li key={version.id}>
                     <VersionCard
@@ -101,10 +115,12 @@ export function VersionCardsGrid({
                       selected={selectedVersionId === version.id}
                       disabled={pending}
                       onSelect={() => onSelectVersion(version.id)}
+                      onToggleInUse={onToggleInUse}
                     />
                   </li>
                 ))}
               </ul>
+              </>
             ) : null}
           </div>
         ) : null}
@@ -120,6 +136,7 @@ function VersionCard({
   selected,
   disabled,
   onSelect,
+  onToggleInUse,
 }: {
   version: CopyVersionRecord;
   typeName: string;
@@ -127,6 +144,10 @@ function VersionCard({
   selected: boolean;
   disabled: boolean;
   onSelect: () => void;
+  onToggleInUse: (
+    versionId: string,
+    inUse: boolean
+  ) => boolean | void | Promise<boolean | void>;
 }) {
   const title = version.title?.trim() || "Untitled";
   const preview = isVersionGuideContent(typeName, version.content)
@@ -134,50 +155,67 @@ function VersionCard({
     : contentPreview(version.content);
 
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onSelect}
+    <Card
+      size="sm"
       className={cn(
-        "h-full w-full text-left transition-[box-shadow,transform]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        "h-full rounded-none border-2 py-0 ring-0",
+        selected
+          ? "border-foreground bg-background shadow-sm"
+          : archived
+            ? "border-foreground/15 bg-muted/20 opacity-80 hover:opacity-100"
+            : "border-foreground/25 hover:border-foreground hover:bg-background/80",
         disabled && "pointer-events-none opacity-60"
       )}
     >
-      <Card
-        size="sm"
-        className={cn(
-          "h-full rounded-none border-2 py-0 ring-0",
-          selected
-            ? "border-foreground bg-background shadow-sm"
-            : archived
-              ? "border-foreground/15 bg-muted/20 opacity-80 hover:opacity-100"
-              : "border-foreground/25 hover:border-foreground hover:bg-background/80"
-        )}
-      >
-        <CardHeader className="border-b border-foreground/10 pb-3">
-          <CardTitle className="flex items-start gap-2 text-sm">
-            <FileTextIcon className="mt-0.5 size-4 shrink-0 opacity-70" />
-            <span className="line-clamp-2">
-              {title}
-              {archived ? (
-                <span className="ml-1.5 text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
-                  · Archived
-                </span>
-              ) : null}
-            </span>
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Updated {formatDateTime(version.updatedAt)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-3">
-          <p className="line-clamp-4 text-xs leading-relaxed text-muted-foreground">
-            {preview}
-          </p>
-        </CardContent>
-      </Card>
-    </button>
+      <div className="flex h-full items-stretch">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onSelect}
+          className={cn(
+            "flex min-w-0 flex-1 flex-col text-left",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
+          )}
+        >
+          <CardHeader className="border-b border-foreground/10 pb-3">
+            <CardTitle className="flex items-start gap-2 text-sm">
+              <FileTextIcon className="mt-0.5 size-4 shrink-0 opacity-70" />
+              <span className="line-clamp-2 flex-1">
+                {title}
+                {archived ? (
+                  <span className="ml-1.5 text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
+                    · Archived
+                  </span>
+                ) : null}
+                {version.inUse ? (
+                  <span className="ml-1.5 text-[10px] font-normal uppercase tracking-wide text-amber-600">
+                    · In use
+                  </span>
+                ) : null}
+              </span>
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Updated {formatDateTime(version.updatedAt)}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-3">
+            <p className="line-clamp-4 text-xs leading-relaxed text-muted-foreground">
+              {preview}
+            </p>
+          </CardContent>
+        </button>
+        {!archived ? (
+          <div className="flex shrink-0 items-start border-l border-foreground/10 px-1.5 pt-3">
+            <VersionInUseStar
+              size="sm"
+              inUse={version.inUse}
+              disabled={disabled}
+              onToggle={(next) => onToggleInUse(version.id, next)}
+            />
+          </div>
+        ) : null}
+      </div>
+    </Card>
   );
 }
 

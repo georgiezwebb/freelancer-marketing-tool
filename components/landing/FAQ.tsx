@@ -30,7 +30,7 @@ const faqs = [
     id: "ai",
     question: "Does it write copy for you?",
     answer:
-      "No. The app doesn't generate text — you do. The built-in guides are plain prompts and checklists to simplify the writing process, not an AI ghostwriter.",
+      "It can if you want. The built-in guides are plain prompts and checklists to simplify the writing process, but an AI is wired in and can be used simply for inspiration, advice or complete copy, if you need it.",
   },
 ] as const
 

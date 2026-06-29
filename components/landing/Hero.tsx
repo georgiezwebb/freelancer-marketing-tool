@@ -36,14 +36,11 @@ export function Hero() {
             lineHeight: 1.08,
           }}
         >
-          One place for the copy you keep rewriting.{" "}
-          <span className="text-gradient-hero">With a record of what&apos;s live.</span>
+          <span className="text-gradient-hero">A place for marketing text.</span>
         </h1>
         <p className="motion-safe:fade-up motion-safe:fade-up-delay-2 mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg">
-          I built PitchKit because my marketing text lived in too many tabs —
-          and I never knew which bio or pitch I was actually using. It groups
-          sales and marketing copy by type, offers a few prompts when you&apos;re
-          stuck, and keeps versions so you can see what&apos;s current.
+          This app is an easy way to store and manage sales and marketing copy. It groups by type, offers a few prompts when you&apos;re
+          stuck, and keeps versions so you can see what you're currently using.
         </p>
         <div className="motion-safe:fade-up motion-safe:fade-up-delay-3 mt-10 flex w-full flex-col items-stretch justify-center gap-3 sm:mt-12 sm:w-auto sm:flex-row sm:items-center">
           <Button
