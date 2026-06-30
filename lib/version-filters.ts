@@ -1,4 +1,9 @@
-import type { CopyTypeRecord, CopyVersionRecord } from "@/lib/dashboard-types";
+import type {
+  CopyPieceRecord,
+  CopyTypeRecord,
+  CopyVersionRecord,
+} from "@/lib/dashboard-types";
+import { allVersionsForType } from "@/lib/copy-tree";
 
 export function isArchivedVersion(version: CopyVersionRecord): boolean {
   return version.archivedAt !== null;
@@ -33,8 +38,20 @@ export function archivedVersions(versions: CopyVersionRecord[]): CopyVersionReco
   return sortByArchivedDate(versions.filter((v) => isArchivedVersion(v)));
 }
 
+export function activePieces(pieces: CopyPieceRecord[]): CopyPieceRecord[] {
+  return [...pieces].sort((a, b) => {
+    const aActive = activeVersions(a.versions).length > 0;
+    const bActive = activeVersions(b.versions).length > 0;
+    if (aActive !== bActive) return aActive ? -1 : 1;
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  });
+}
+
 export type ArchivedVersionEntry = {
   version: CopyVersionRecord;
+  pieceId: string;
+  pieceTitle: string;
   typeId: string;
   typeName: string;
 };
@@ -44,13 +61,17 @@ export function allArchivedVersions(
 ): ArchivedVersionEntry[] {
   const items: ArchivedVersionEntry[] = [];
   for (const type of types) {
-    for (const version of type.versions) {
-      if (isArchivedVersion(version)) {
-        items.push({
-          version,
-          typeId: type.id,
-          typeName: type.name,
-        });
+    for (const piece of type.pieces) {
+      for (const version of piece.versions) {
+        if (isArchivedVersion(version)) {
+          items.push({
+            version,
+            pieceId: piece.id,
+            pieceTitle: piece.title,
+            typeId: type.id,
+            typeName: type.name,
+          });
+        }
       }
     }
   }
@@ -63,4 +84,10 @@ export function allArchivedVersions(
     ).getTime();
     return bTime - aTime;
   });
+}
+
+export function allActiveVersionsForType(
+  type: CopyTypeRecord
+): CopyVersionRecord[] {
+  return activeVersions(allVersionsForType(type));
 }

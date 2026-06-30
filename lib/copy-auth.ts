@@ -6,12 +6,26 @@ export async function getOwnedCopyType(userId: string, typeId: string) {
   });
 }
 
+export async function getOwnedCopyPiece(userId: string, pieceId: string) {
+  return prisma.copyPiece.findFirst({
+    where: {
+      id: pieceId,
+      type: { userId },
+    },
+    include: { type: true },
+  });
+}
+
 export async function getOwnedCopyVersion(userId: string, versionId: string) {
   return prisma.copyVersion.findFirst({
     where: {
       id: versionId,
-      type: { userId },
+      piece: { type: { userId } },
     },
-    include: { type: true },
+    include: {
+      piece: {
+        include: { type: true },
+      },
+    },
   });
 }

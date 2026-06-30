@@ -10,7 +10,8 @@ import {
   sanitizeWritingNotes,
 } from "@/lib/marketing-stack-templates";
 
-import type { CopyVersionRecord } from "@/lib/dashboard-types";
+import type { CopyPieceRecord, CopyVersionRecord } from "@/lib/dashboard-types";
+import { versionLabel } from "@/lib/dashboard-types";
 import {
   ARCHIVE_RETENTION_NOTICE,
   archiveDeletionDateIso,
@@ -46,14 +47,17 @@ export type CopyEditorHandle = {
 
 type Props = {
   version: CopyVersionRecord | null;
+  piece: CopyPieceRecord | null;
   typeId: string | null;
   typeName: string | null;
   writingNotes: string;
   showNotesInitially?: boolean;
   onNotesDismiss?: () => void;
   onDirtyChange?: (dirty: boolean) => void;
+  onPieceTitleDirtyChange?: (dirty: boolean) => void;
   onWritingNotesSaved: (typeId: string, writingNotes: string) => void;
   onSaved: (version: CopyVersionRecord) => void;
+  onPieceSaved: (piece: CopyPieceRecord) => void;
   onDeleted: (versionId: string) => void;
   onArchived: (version: CopyVersionRecord) => void;
   onToggleInUse: (
@@ -61,24 +65,29 @@ type Props = {
     inUse: boolean
   ) => boolean | void | Promise<boolean | void>;
   onBackToVersions?: () => void;
+  onRequestNewVersion?: () => void;
 };
 
 export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
   function CopyEditor(
     {
       version,
+      piece,
       typeId,
       typeName,
       writingNotes,
       showNotesInitially = false,
       onNotesDismiss,
       onDirtyChange,
+      onPieceTitleDirtyChange,
       onWritingNotesSaved,
       onSaved,
+      onPieceSaved,
       onDeleted,
       onArchived,
       onToggleInUse,
       onBackToVersions,
+      onRequestNewVersion,
     },
     ref
   ) {
@@ -91,11 +100,15 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [dirty, setDirty] = React.useState(false);
+  const [titleDirty, setTitleDirty] = React.useState(false);
   const notesSaveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedNotes = React.useRef("");
+  const lastSavedTitle = React.useRef("");
   const titleInputRef = React.useRef<HTMLInputElement>(null);
   const activeVersionIdRef = React.useRef<string | null>(version?.id ?? null);
+  const activePieceIdRef = React.useRef<string | null>(piece?.id ?? null);
   activeVersionIdRef.current = version?.id ?? null;
+  activePieceIdRef.current = piece?.id ?? null;
 
   const markDirty = React.useCallback(() => {
     setDirty(true);
@@ -109,23 +122,29 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
 
   /** Reset fields when switching versions — useLayoutEffect so Quill mounts with correct content. */
   React.useLayoutEffect(() => {
-    if (!version) {
+    if (!version || !piece) {
       setTitle("");
       setContent("");
       setUserNotes("");
       setNotesOpen(false);
       markClean();
+      setTitleDirty(false);
+      onPieceTitleDirtyChange?.(false);
       setError(null);
       setNotesStatus("idle");
       return;
     }
-    setTitle(version.title ?? "");
+    const pieceTitle = piece.title;
+    setTitle(pieceTitle);
+    lastSavedTitle.current = pieceTitle;
     setContent(editorContentForVersion(version, typeName));
     setNotesOpen(Boolean(showNotesInitially));
     markClean();
+    setTitleDirty(false);
+    onPieceTitleDirtyChange?.(false);
     setError(null);
     setNotesStatus("idle");
-  }, [version?.id, typeName, showNotesInitially, markClean]);
+  }, [version?.id, piece?.id, piece?.title, typeName, showNotesInitially, markClean, onPieceTitleDirtyChange]);
 
   const notesCleanupRef = React.useRef<string | null>(null);
 
@@ -159,30 +178,65 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
 
   const saveVersion = React.useCallback(async (): Promise<boolean> => {
     const versionId = version?.id;
-    if (!versionId) return true;
+    const pieceId = piece?.id;
+    if (!versionId || !pieceId) return true;
 
-    const payload = {
-      title: title.trim() || null,
-      content:
-        typeName && isVersionGuideContent(typeName, content) ? "" : content,
-    };
+    const contentPayload =
+      typeName && isVersionGuideContent(typeName, content) ? "" : content;
+    const titleChanged = title.trim() !== lastSavedTitle.current.trim();
+    const contentChanged = contentPayload !== version.content;
+
+    if (!titleChanged && !contentChanged) {
+      markClean();
+      setTitleDirty(false);
+      onPieceTitleDirtyChange?.(false);
+      return true;
+    }
 
     setPending(true);
     setError(null);
     try {
-      const res = await fetch(`/api/copy-versions/${versionId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const j = (await res.json().catch(() => null)) as { error?: string };
-        throw new Error(j?.error ?? "Save failed");
+      if (contentChanged) {
+        const res = await fetch(`/api/copy-versions/${versionId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: contentPayload }),
+        });
+        if (!res.ok) {
+          const j = (await res.json().catch(() => null)) as { error?: string };
+          throw new Error(j?.error ?? "Save failed");
+        }
+        const saved = (await res.json()) as CopyVersionRecord;
+        if (activeVersionIdRef.current === versionId) {
+          onSaved(saved);
+        }
       }
-      const saved = (await res.json()) as CopyVersionRecord;
+
+      if (titleChanged) {
+        const trimmed = title.trim();
+        if (!trimmed) {
+          throw new Error("Title is required");
+        }
+        const res = await fetch(`/api/copy-pieces/${pieceId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: trimmed }),
+        });
+        if (!res.ok) {
+          const j = (await res.json().catch(() => null)) as { error?: string };
+          throw new Error(j?.error ?? "Could not save title");
+        }
+        const savedPiece = (await res.json()) as CopyPieceRecord;
+        if (activePieceIdRef.current === pieceId) {
+          lastSavedTitle.current = savedPiece.title;
+          onPieceSaved(savedPiece);
+        }
+      }
+
       if (activeVersionIdRef.current !== versionId) return true;
-      onSaved(saved);
       markClean();
+      setTitleDirty(false);
+      onPieceTitleDirtyChange?.(false);
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -190,7 +244,17 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
     } finally {
       setPending(false);
     }
-  }, [version?.id, title, content, typeName, onSaved, markClean]);
+  }, [
+    version,
+    piece,
+    title,
+    content,
+    typeName,
+    onSaved,
+    onPieceSaved,
+    markClean,
+    onPieceTitleDirtyChange,
+  ]);
 
   React.useImperativeHandle(ref, () => ({ save: saveVersion }), [saveVersion]);
 
@@ -283,7 +347,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
   const canShowNotes = Boolean(typeId && version);
   const isArchived = version ? isArchivedVersion(version) : false;
 
-  if (!version) {
+  if (!version || !piece) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
         {typeName ? (
@@ -294,7 +358,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
         <p className="max-w-md text-sm text-muted-foreground">
           {typeName
             ? "Select a version on the left, or use + to add one."
-            : "Expand a type on the left, then select or add a version to edit."}
+            : "Expand a type on the left, then select or add copy to edit."}
         </p>
       </div>
     );
@@ -322,6 +386,10 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
                 </p>
               ) : null}
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                <span className="font-medium text-foreground">
+                  {versionLabel(version)}
+                </span>
+                {" · "}
                 {isArchived ? (
                   <>
                     <span className="font-medium text-foreground">Archived · </span>
@@ -352,6 +420,18 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+              {onRequestNewVersion ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={pending}
+                  onClick={onRequestNewVersion}
+                  className="col-span-2 sm:col-span-1"
+                >
+                  New version
+                </Button>
+              ) : null}
               {!isArchived ? (
                 <Button
                   type="button"
@@ -417,27 +497,29 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
 
       <div className="shrink-0 border-b border-foreground/10 px-4 py-3 sm:px-6">
         <div className="space-y-1.5">
-          <label htmlFor="version-title" className="text-xs font-medium">
+          <label htmlFor="piece-title" className="text-xs font-medium">
             Title
           </label>
           <input
             ref={titleInputRef}
-            id="version-title"
+            id="piece-title"
             type="text"
             className={inputClass}
             value={title}
             onChange={(e) => {
               setTitle(e.target.value);
+              setTitleDirty(true);
+              onPieceTitleDirtyChange?.(true);
               markDirty();
             }}
-            placeholder="e.g. Short post, v2, launch week"
+            placeholder="e.g. Launch week post, welcome email"
           />
         </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="sticky top-0 z-10 flex flex-col gap-2 border-b border-foreground/10 bg-background/95 px-4 py-2 backdrop-blur-sm sm:px-6">
-          {error || dirty ? (
+          {error || dirty || titleDirty ? (
             <div className="text-xs text-muted-foreground">
               {error ? (
                 <p className="text-destructive" role="alert">
@@ -451,7 +533,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
           <Button
             type="button"
             size="sm"
-            disabled={pending || !dirty}
+            disabled={pending || (!dirty && !titleDirty)}
             onClick={handleSave}
             className="w-full"
           >

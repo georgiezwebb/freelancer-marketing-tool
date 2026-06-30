@@ -48,11 +48,16 @@ export { Prisma }
 export type User = Prisma.UserModel
 /**
  * Model CopyType
- * User-defined category for organizing copy (e.g. Type 1, LinkedIn, Email).
+ * User-defined category for organizing copy (e.g. LinkedIn, Email).
  */
 export type CopyType = Prisma.CopyTypeModel
 /**
+ * Model CopyPiece
+ * A titled copy item within a type (e.g. "Launch week post").
+ */
+export type CopyPiece = Prisma.CopyPieceModel
+/**
  * Model CopyVersion
- * A version or post within a type (title + body).
+ * A version of a copy piece (body only — title lives on the piece).
  */
 export type CopyVersion = Prisma.CopyVersionModel

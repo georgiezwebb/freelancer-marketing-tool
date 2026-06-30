@@ -4,12 +4,22 @@ import { getOrCreateAppUser } from "@/lib/app-user";
 import { getOwnedCopyVersion } from "@/lib/copy-auth";
 import { prisma } from "@/lib/db";
 import { serializeVersion } from "@/lib/dashboard-types";
-import {
-  isVersionGuideContent,
-  sanitizeWritingNotes,
-} from "@/lib/marketing-stack-templates";
+import { isVersionGuideContent } from "@/lib/marketing-stack-templates";
 
 type Params = Promise<{ id: string }>;
+
+async function versionNumberFor(
+  pieceId: string,
+  versionId: string
+): Promise<number> {
+  const versions = await prisma.copyVersion.findMany({
+    where: { pieceId },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  const index = versions.findIndex((v) => v.id === versionId);
+  return index >= 0 ? index + 1 : versions.length;
+}
 
 export async function GET(_request: Request, { params }: { params: Params }) {
   const user = await getOrCreateAppUser();
@@ -19,11 +29,14 @@ export async function GET(_request: Request, { params }: { params: Params }) {
 
   const { id } = await params;
   const existing = await getOwnedCopyVersion(user.id, id);
-  if (!existing) {
+  if (!existing || !existing.pieceId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return NextResponse.json(serializeVersion(existing));
+  const versionNumber = await versionNumberFor(existing.pieceId, existing.id);
+  return NextResponse.json(
+    serializeVersion({ ...existing, pieceId: existing.pieceId }, versionNumber)
+  );
 }
 
 export async function PATCH(request: Request, { params }: { params: Params }) {
@@ -34,7 +47,7 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
 
   const { id } = await params;
   const existing = await getOwnedCopyVersion(user.id, id);
-  if (!existing) {
+  if (!existing || !existing.pieceId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -49,23 +62,17 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
-  const { title, content, archived, inUse } = body as Record<string, unknown>;
+  const { content, archived, inUse } = body as Record<string, unknown>;
   const data: {
-    title?: string | null;
     content?: string;
     archivedAt?: Date | null;
     inUse?: boolean;
   } = {};
 
-  if ("title" in body) {
-    data.title =
-      typeof title === "string" && title.trim().length > 0
-        ? title.trim()
-        : null;
-  }
   if ("content" in body) {
     const raw = typeof content === "string" ? content : "";
-    data.content = isVersionGuideContent(existing.type.name, raw) ? "" : raw;
+    const typeName = existing.piece?.type.name ?? "";
+    data.content = isVersionGuideContent(typeName, raw) ? "" : raw;
   }
   if ("archived" in body) {
     if (typeof archived !== "boolean") {
@@ -102,7 +109,7 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
   try {
     if (data.inUse === true) {
       await prisma.copyVersion.updateMany({
-        where: { typeId: existing.typeId, id: { not: id } },
+        where: { pieceId: existing.pieceId, id: { not: id } },
         data: { inUse: false },
       });
     }
@@ -112,7 +119,10 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
       data,
     });
 
-    return NextResponse.json(serializeVersion(version));
+    const versionNumber = await versionNumberFor(existing.pieceId, version.id);
+    return NextResponse.json(
+      serializeVersion({ ...version, pieceId: existing.pieceId }, versionNumber)
+    );
   } catch (err) {
     console.error("copy-version PATCH failed:", err);
     return NextResponse.json(

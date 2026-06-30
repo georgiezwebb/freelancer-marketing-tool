@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { CopyTypeRecord } from "@/lib/dashboard-types";
+import { versionLabel } from "@/lib/dashboard-types";
 import {
   ARCHIVE_RETENTION_NOTICE,
   archiveDeletionDateIso,
@@ -196,8 +197,8 @@ export function ArchivedVersionsPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
         <ul className="mx-auto flex max-w-3xl flex-col gap-4">
-          {archived.map(({ version, typeId, typeName }) => {
-            const title = version.title?.trim() || "Untitled version";
+          {archived.map(({ version, pieceTitle, typeId, typeName }) => {
+            const label = versionLabel(version);
             const archivedDate = version.archivedAt ?? version.updatedAt;
             const openSelected = selectedVersionId === version.id;
             const checked = selectedIds.has(version.id);
@@ -212,7 +213,7 @@ export function ArchivedVersionsPanel({
                     disabled={deleting}
                     onChange={(e) => toggleOne(version.id, e.target.checked)}
                     onClick={(e) => e.stopPropagation()}
-                    aria-label={`Select ${title}`}
+                    aria-label={`Select ${pieceTitle} ${label}`}
                   />
                   <button
                     type="button"
@@ -235,10 +236,12 @@ export function ArchivedVersionsPanel({
                           <div className="min-w-0 flex-1">
                             <CardTitle className="flex items-center gap-2 text-base">
                               <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
-                              <span className="line-clamp-2 sm:truncate">{title}</span>
+                              <span className="line-clamp-2 sm:truncate">
+                                {pieceTitle}
+                              </span>
                             </CardTitle>
                             <CardDescription className="mt-1.5">
-                              {typeName}
+                              {typeName} · {label}
                             </CardDescription>
                           </div>
                           <span className="shrink-0 text-xs text-muted-foreground sm:text-right">

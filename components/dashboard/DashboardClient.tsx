@@ -15,13 +15,27 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import type { CopyTypeRecord, CopyVersionRecord } from "@/lib/dashboard-types";
-import { activeVersions, allArchivedVersions } from "@/lib/version-filters";
+import type {
+  CopyPieceRecord,
+  CopyTypeRecord,
+  CopyVersionRecord,
+} from "@/lib/dashboard-types";
+import {
+  findPiece,
+  findVersionContext,
+  initialSelection,
+} from "@/lib/copy-tree";
+import { allArchivedVersions } from "@/lib/version-filters";
 import { ARCHIVE_RETENTION_NOTICE } from "@/lib/archive-retention";
 
 import { ArchivedVersionsPanel } from "./ArchivedVersionsPanel";
 import { CopyEditor, type CopyEditorHandle } from "./CopyEditor";
 import { DashboardSidebar } from "./DashboardSidebar";
+import {
+  NewVersionDialog,
+  type NewVersionSource,
+} from "./NewVersionDialog";
+import { PieceCardsGrid } from "./PieceCardsGrid";
 import { UnsavedChangesDialog } from "./UnsavedChangesDialog";
 import { VersionCardsGrid } from "./VersionCardsGrid";
 
@@ -29,16 +43,41 @@ type Props = {
   initialTypes: CopyTypeRecord[];
 };
 
-function findVersion(
-  types: CopyTypeRecord[],
-  versionId: string | null
-): CopyVersionRecord | null {
-  if (!versionId) return null;
-  for (const type of types) {
-    const v = type.versions.find((x) => x.id === versionId);
-    if (v) return v;
-  }
-  return null;
+function mergePieceIntoTypes(piece: CopyPieceRecord, types: CopyTypeRecord[]) {
+  return types.map((t) =>
+    t.id === piece.typeId
+      ? {
+          ...t,
+          pieces: t.pieces.some((p) => p.id === piece.id)
+            ? t.pieces
+                .map((p) => (p.id === piece.id ? piece : p))
+                .sort((a, b) => a.sortOrder - b.sortOrder)
+            : [...t.pieces, piece].sort((a, b) => a.sortOrder - b.sortOrder),
+        }
+      : t
+  );
+}
+
+function mergeVersionIntoTypes(
+  version: CopyVersionRecord,
+  types: CopyTypeRecord[]
+) {
+  return types.map((t) => ({
+    ...t,
+    pieces: t.pieces.map((p) =>
+      p.id === version.pieceId
+        ? {
+            ...p,
+            versions: p.versions.some((v) => v.id === version.id)
+              ? p.versions.map((v) => (v.id === version.id ? version : v))
+              : [...p.versions, version].sort(
+                  (a, b) => a.versionNumber - b.versionNumber
+                ),
+            updatedAt: version.updatedAt,
+          }
+        : p
+    ),
+  }));
 }
 
 export function DashboardClient({ initialTypes }: Props) {
@@ -46,35 +85,51 @@ export function DashboardClient({ initialTypes }: Props) {
   const editorRef = React.useRef<CopyEditorHandle>(null);
   const pendingNavRef = React.useRef<(() => void) | null>(null);
 
+  const initial = initialSelection(initialTypes);
+
   const [types, setTypes] = React.useState(initialTypes);
   const [selectedTypeId, setSelectedTypeId] = React.useState<string | null>(
-    initialTypes[0]?.id ?? null
+    initial.typeId
+  );
+  const [selectedPieceId, setSelectedPieceId] = React.useState<string | null>(
+    initial.pieceId
   );
   const [selectedVersionId, setSelectedVersionId] = React.useState<
     string | null
-  >(initialTypes[0]?.versions[0]?.id ?? null);
+  >(initial.versionId);
   const [openNotesForVersionId, setOpenNotesForVersionId] = React.useState<
     string | null
   >(null);
   const [versionDirty, setVersionDirty] = React.useState(false);
+  const [pieceTitleDirty, setPieceTitleDirty] = React.useState(false);
   const [unsavedDialogOpen, setUnsavedDialogOpen] = React.useState(false);
   const [unsavedSaving, setUnsavedSaving] = React.useState(false);
-  const [createVersionPending, setCreateVersionPending] = React.useState(false);
+  const [createPending, setCreatePending] = React.useState(false);
+  const [newVersionDialog, setNewVersionDialog] = React.useState<{
+    pieceId: string;
+    typeId: string;
+  } | null>(null);
   const [viewMode, setViewMode] = React.useState<"library" | "archived">(
     "library"
   );
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
   const selectedType = types.find((t) => t.id === selectedTypeId) ?? null;
+  const selectedPieceCtx = findPiece(types, selectedPieceId);
+  const selectedPiece = selectedPieceCtx?.piece ?? null;
+  const versionCtx = findVersionContext(types, selectedVersionId);
+  const selectedVersion = versionCtx?.version ?? null;
   const archivedCount = allArchivedVersions(types).length;
-  const selectedVersion = findVersion(types, selectedVersionId);
 
   const versionDirtyRef = React.useRef(versionDirty);
+  const pieceTitleDirtyRef = React.useRef(pieceTitleDirty);
   const selectedVersionIdRef = React.useRef(selectedVersionId);
   versionDirtyRef.current = versionDirty;
+  pieceTitleDirtyRef.current = pieceTitleDirty;
   selectedVersionIdRef.current = selectedVersionId;
 
-  const needsSavePrompt = versionDirty && selectedVersionId !== null;
+  const needsSavePrompt =
+    (versionDirty || pieceTitleDirty) && selectedVersionId !== null;
 
   React.useEffect(() => {
     if (!needsSavePrompt) return;
@@ -87,7 +142,10 @@ export function DashboardClient({ initialTypes }: Props) {
   }, [needsSavePrompt]);
 
   const guardNavigation = React.useCallback((action: () => void) => {
-    if (!versionDirtyRef.current || !selectedVersionIdRef.current) {
+    if (
+      (!versionDirtyRef.current && !pieceTitleDirtyRef.current) ||
+      !selectedVersionIdRef.current
+    ) {
       action();
       return;
     }
@@ -113,30 +171,65 @@ export function DashboardClient({ initialTypes }: Props) {
     setUnsavedSaving(false);
     if (ok) {
       versionDirtyRef.current = false;
+      pieceTitleDirtyRef.current = false;
       setVersionDirty(false);
+      setPieceTitleDirty(false);
       completePendingNavigation();
     }
   }
 
   function handleDiscardAndContinue() {
     versionDirtyRef.current = false;
+    pieceTitleDirtyRef.current = false;
     setVersionDirty(false);
+    setPieceTitleDirty(false);
     completePendingNavigation();
   }
 
   function handleSelectType(typeId: string) {
-    if (typeId === selectedTypeId && !selectedVersionId) return;
+    if (
+      typeId === selectedTypeId &&
+      !selectedPieceId &&
+      !selectedVersionId
+    ) {
+      return;
+    }
     guardNavigation(() => {
+      setViewMode("library");
       setSelectedTypeId(typeId);
+      setSelectedPieceId(null);
       setSelectedVersionId(null);
       setOpenNotesForVersionId(null);
     });
   }
 
-  function handleSelectVersion(versionId: string, typeId: string) {
+  function handleSelectPiece(pieceId: string, typeId: string) {
+    if (
+      viewMode === "library" &&
+      pieceId === selectedPieceId &&
+      typeId === selectedTypeId &&
+      !selectedVersionId
+    ) {
+      return;
+    }
+    guardNavigation(() => {
+      setViewMode("library");
+      setSelectedTypeId(typeId);
+      setSelectedPieceId(pieceId);
+      setSelectedVersionId(null);
+      setOpenNotesForVersionId(null);
+    });
+  }
+
+  function handleSelectVersion(
+    versionId: string,
+    pieceId: string,
+    typeId: string
+  ) {
     if (
       viewMode === "library" &&
       versionId === selectedVersionId &&
+      pieceId === selectedPieceId &&
       typeId === selectedTypeId
     ) {
       return;
@@ -147,13 +240,14 @@ export function DashboardClient({ initialTypes }: Props) {
           const res = await fetch(`/api/copy-versions/${versionId}`);
           if (res.ok) {
             const fresh = (await res.json()) as CopyVersionRecord;
-            mergeVersionIntoTypes(fresh);
+            setTypes((prev) => mergeVersionIntoTypes(fresh, prev));
           }
         } catch {
           // Fall back to cached client state if refresh fails.
         }
         setViewMode("library");
         setSelectedTypeId(typeId);
+        setSelectedPieceId(pieceId);
         setSelectedVersionId(versionId);
         setOpenNotesForVersionId(null);
       })();
@@ -166,44 +260,72 @@ export function DashboardClient({ initialTypes }: Props) {
     });
   }
 
-  async function handleCreateVersion(typeId: string) {
-    const type = types.find((t) => t.id === typeId);
-    if (!type) return;
-
+  async function handleCreatePiece(typeId: string) {
     guardNavigation(() => {
       void (async () => {
-        setCreateVersionPending(true);
+        setCreatePending(true);
         try {
-          const res = await fetch(`/api/copy-types/${typeId}/versions`, {
+          const res = await fetch(`/api/copy-types/${typeId}/pieces`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              title: `Version ${activeVersions(type.versions).length + 1}`,
-            }),
+            body: JSON.stringify({ title: "Untitled" }),
           });
-          if (!res.ok) throw new Error("Failed to create version");
-          const version = (await res.json()) as CopyVersionRecord;
-          handleVersionCreated(version);
+          if (!res.ok) throw new Error("Failed to create copy");
+          const piece = (await res.json()) as CopyPieceRecord;
+          setTypes((prev) => mergePieceIntoTypes(piece, prev));
+          setSelectedTypeId(typeId);
+          setSelectedPieceId(piece.id);
+          const firstVersion = piece.versions[0];
+          setSelectedVersionId(firstVersion?.id ?? null);
+          setOpenNotesForVersionId(firstVersion?.id ?? null);
+          setVersionDirty(false);
+          setPieceTitleDirty(false);
+          setSidebarOpen(false);
         } finally {
-          setCreateVersionPending(false);
+          setCreatePending(false);
         }
       })();
     });
   }
 
-  function handleVersionCreated(version: CopyVersionRecord) {
-    setTypes((prev) =>
-      prev.map((t) =>
-        t.id === version.typeId
-          ? { ...t, versions: [version, ...t.versions] }
-          : t
-      )
-    );
-    setSelectedTypeId(version.typeId);
-    setSelectedVersionId(version.id);
-    setOpenNotesForVersionId(version.id);
-    setVersionDirty(false);
-    setSidebarOpen(false);
+  function handleRequestNewVersion(pieceId: string, typeId: string) {
+    guardNavigation(() => {
+      setNewVersionDialog({ pieceId, typeId });
+    });
+  }
+
+  async function handleConfirmNewVersion(source: NewVersionSource) {
+    if (!newVersionDialog) return;
+    const { pieceId } = newVersionDialog;
+
+    setCreatePending(true);
+    try {
+      let sourceVersionId: string | undefined;
+      if (source.kind === "current" || source.kind === "previous") {
+        sourceVersionId = source.versionId;
+      }
+
+      const res = await fetch(`/api/copy-pieces/${pieceId}/versions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          sourceVersionId ? { sourceVersionId } : {}
+        ),
+      });
+      if (!res.ok) throw new Error("Failed to create version");
+      const version = (await res.json()) as CopyVersionRecord;
+
+      setTypes((prev) => mergeVersionIntoTypes(version, prev));
+      setSelectedTypeId(newVersionDialog.typeId);
+      setSelectedPieceId(pieceId);
+      setSelectedVersionId(version.id);
+      setOpenNotesForVersionId(version.id);
+      setVersionDirty(false);
+      setNewVersionDialog(null);
+      setSidebarOpen(false);
+    } finally {
+      setCreatePending(false);
+    }
   }
 
   function handleWritingNotesSaved(typeId: string, notes: string) {
@@ -213,30 +335,16 @@ export function DashboardClient({ initialTypes }: Props) {
   }
 
   function handleVersionSaved(version: CopyVersionRecord) {
-    mergeVersionIntoTypes(version);
+    setTypes((prev) => mergeVersionIntoTypes(version, prev));
   }
 
-  function mergeVersionIntoTypes(version: CopyVersionRecord) {
-    setTypes((prev) =>
-      prev.map((t) =>
-        t.id === version.typeId
-          ? {
-              ...t,
-              versions: t.versions
-                .map((v) => (v.id === version.id ? version : v))
-                .sort(
-                  (a, b) =>
-                    new Date(b.updatedAt).getTime() -
-                    new Date(a.updatedAt).getTime()
-                ),
-            }
-          : t
-      )
-    );
+  function handlePieceSaved(piece: CopyPieceRecord) {
+    setTypes((prev) => mergePieceIntoTypes(piece, prev));
+    setPieceTitleDirty(false);
   }
 
   function handleVersionArchived(version: CopyVersionRecord) {
-    mergeVersionIntoTypes(version);
+    setTypes((prev) => mergeVersionIntoTypes(version, prev));
     if (version.archivedAt) {
       setSelectedVersionId((current) =>
         current === version.id ? null : current
@@ -264,18 +372,21 @@ export function DashboardClient({ initialTypes }: Props) {
       }
       const version = (await res.json()) as CopyVersionRecord;
       setTypes((prev) =>
-        prev.map((t) =>
-          t.id === version.typeId
-            ? {
-                ...t,
-                versions: t.versions.map((v) => {
-                  if (v.id === version.id) return version;
-                  if (version.inUse) return { ...v, inUse: false };
-                  return v;
-                }),
-              }
-            : t
-        )
+        prev.map((t) => ({
+          ...t,
+          pieces: t.pieces.map((p) =>
+            p.id === version.pieceId
+              ? {
+                  ...p,
+                  versions: p.versions.map((v) => {
+                    if (v.id === version.id) return version;
+                    if (version.inUse) return { ...v, inUse: false };
+                    return v;
+                  }),
+                }
+              : p
+          ),
+        }))
       );
       return true;
     } catch (err) {
@@ -290,7 +401,10 @@ export function DashboardClient({ initialTypes }: Props) {
     setTypes((prev) => {
       const next = prev.map((t) => ({
         ...t,
-        versions: t.versions.filter((v) => !idSet.has(v.id)),
+        pieces: t.pieces.map((p) => ({
+          ...p,
+          versions: p.versions.filter((v) => !idSet.has(v.id)),
+        })),
       }));
       setSelectedVersionId((current) =>
         current && idSet.has(current) ? null : current
@@ -311,11 +425,38 @@ export function DashboardClient({ initialTypes }: Props) {
     });
   }
 
+  function handleBackToPieces() {
+    guardNavigation(() => {
+      setSelectedPieceId(null);
+      setSelectedVersionId(null);
+      setOpenNotesForVersionId(null);
+    });
+  }
+
   function handleHomeClick(e: React.MouseEvent<HTMLAnchorElement>) {
     if (!needsSavePrompt) return;
     e.preventDefault();
     guardNavigation(() => router.push("/"));
   }
+
+  const newVersionPiece =
+    newVersionDialog &&
+    findPiece(types, newVersionDialog.pieceId)?.piece;
+
+  const sidebarProps = {
+    types,
+    selectedTypeId,
+    selectedPieceId,
+    selectedVersionId,
+    onSelectType: handleSelectType,
+    onSelectPiece: handleSelectPiece,
+    onSelectVersion: handleSelectVersion,
+    onTypesChange: setTypes,
+    onCreatePiece: handleCreatePiece,
+    onRequestNewVersion: handleRequestNewVersion,
+    onToggleInUse: handleToggleInUse,
+    createPending,
+  };
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">
@@ -387,15 +528,7 @@ export function DashboardClient({ initialTypes }: Props) {
             <SheetTitle>Sections</SheetTitle>
           </SheetHeader>
           <DashboardSidebar
-            types={types}
-            selectedTypeId={selectedTypeId}
-            selectedVersionId={selectedVersionId}
-            onSelectType={handleSelectType}
-            onSelectVersion={handleSelectVersion}
-            onTypesChange={setTypes}
-            onCreateVersion={handleCreateVersion}
-            onToggleInUse={handleToggleInUse}
-            createVersionPending={createVersionPending}
+            {...sidebarProps}
             className="h-[calc(100%-3.25rem)] w-full border-r-0"
             onNavigate={() => setSidebarOpen(false)}
           />
@@ -403,69 +536,107 @@ export function DashboardClient({ initialTypes }: Props) {
       </Sheet>
 
       <div className="flex min-h-0 min-w-0 flex-1">
-        <DashboardSidebar
-          types={types}
-          selectedTypeId={selectedTypeId}
-          selectedVersionId={selectedVersionId}
-          onSelectType={handleSelectType}
-          onSelectVersion={handleSelectVersion}
-          onTypesChange={setTypes}
-          onCreateVersion={handleCreateVersion}
-          onToggleInUse={handleToggleInUse}
-          createVersionPending={createVersionPending}
-          className="hidden md:flex"
-        />
+        <DashboardSidebar {...sidebarProps} className="hidden md:flex" />
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        {viewMode === "archived" ? (
-          <ArchivedVersionsPanel
-            types={types}
-            selectedVersionId={selectedVersionId}
-            onSelectVersion={handleSelectVersion}
-            onDeleteVersions={handleVersionsDeleted}
-          />
-        ) : selectedVersion ? (
-          <CopyEditor
-            ref={editorRef}
-            version={selectedVersion}
-            typeId={selectedType?.id ?? null}
-            typeName={selectedType?.name ?? null}
-            writingNotes={selectedType?.writingNotes ?? ""}
-            showNotesInitially={openNotesForVersionId === selectedVersion.id}
-            onNotesDismiss={() => setOpenNotesForVersionId(null)}
-            onDirtyChange={setVersionDirty}
-            onWritingNotesSaved={handleWritingNotesSaved}
-            onSaved={handleVersionSaved}
-            onDeleted={handleVersionDeleted}
-            onArchived={handleVersionArchived}
-            onToggleInUse={handleToggleInUse}
-            onBackToVersions={handleBackToVersions}
-          />
-        ) : selectedType ? (
-          <VersionCardsGrid
-            type={selectedType}
-            selectedVersionId={selectedVersionId}
-            pending={createVersionPending}
-            onSelectVersion={(versionId) =>
-              handleSelectVersion(versionId, selectedType.id)
-            }
-            onCreateVersion={() => handleCreateVersion(selectedType.id)}
-            onToggleInUse={handleToggleInUse}
-          />
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center sm:px-8">
-            <p className="max-w-md text-sm text-muted-foreground">
-              <span className="md:hidden">
-                Open the menu to pick a section, then select or add a version to
-                edit.
-              </span>
-              <span className="hidden md:inline">
-                Select a section on the left to view your copy versions.
-              </span>
-            </p>
-          </div>
-        )}
+          {viewMode === "archived" ? (
+            <ArchivedVersionsPanel
+              types={types}
+              selectedVersionId={selectedVersionId}
+              onSelectVersion={(versionId, typeId) => {
+                const ctx = findVersionContext(types, versionId);
+                if (ctx) {
+                  handleSelectVersion(versionId, ctx.piece.id, typeId);
+                }
+              }}
+              onDeleteVersions={handleVersionsDeleted}
+            />
+          ) : selectedVersion && selectedPiece ? (
+            <CopyEditor
+              ref={editorRef}
+              version={selectedVersion}
+              piece={selectedPiece}
+              typeId={selectedType?.id ?? null}
+              typeName={selectedType?.name ?? null}
+              writingNotes={selectedType?.writingNotes ?? ""}
+              showNotesInitially={openNotesForVersionId === selectedVersion.id}
+              onNotesDismiss={() => setOpenNotesForVersionId(null)}
+              onDirtyChange={setVersionDirty}
+              onPieceTitleDirtyChange={setPieceTitleDirty}
+              onWritingNotesSaved={handleWritingNotesSaved}
+              onSaved={handleVersionSaved}
+              onPieceSaved={handlePieceSaved}
+              onDeleted={handleVersionDeleted}
+              onArchived={handleVersionArchived}
+              onToggleInUse={handleToggleInUse}
+              onBackToVersions={handleBackToVersions}
+              onRequestNewVersion={() =>
+                handleRequestNewVersion(
+                  selectedPiece.id,
+                  selectedType?.id ?? ""
+                )
+              }
+            />
+          ) : selectedPiece ? (
+            <VersionCardsGrid
+              piece={selectedPiece}
+              typeName={selectedType?.name ?? ""}
+              selectedVersionId={selectedVersionId}
+              pending={createPending}
+              onBackToPieces={handleBackToPieces}
+              onSelectVersion={(versionId) =>
+                handleSelectVersion(
+                  versionId,
+                  selectedPiece.id,
+                  selectedType?.id ?? ""
+                )
+              }
+              onCreateVersion={() =>
+                handleRequestNewVersion(
+                  selectedPiece.id,
+                  selectedType?.id ?? ""
+                )
+              }
+              onToggleInUse={handleToggleInUse}
+            />
+          ) : selectedType ? (
+            <PieceCardsGrid
+              type={selectedType}
+              selectedPieceId={selectedPieceId}
+              pending={createPending}
+              onSelectPiece={(pieceId) =>
+                handleSelectPiece(pieceId, selectedType.id)
+              }
+              onCreatePiece={() => handleCreatePiece(selectedType.id)}
+            />
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center px-6 text-center sm:px-8">
+              <p className="max-w-md text-sm text-muted-foreground">
+                <span className="md:hidden">
+                  Open the menu to pick a section, then select or add copy to
+                  edit.
+                </span>
+                <span className="hidden md:inline">
+                  Select a section on the left to view your copy.
+                </span>
+              </p>
+            </div>
+          )}
         </main>
       </div>
+
+      <NewVersionDialog
+        open={Boolean(newVersionDialog && newVersionPiece)}
+        pieceTitle={newVersionPiece?.title ?? ""}
+        versions={newVersionPiece?.versions ?? []}
+        currentVersionId={
+          newVersionDialog?.pieceId === selectedPieceId
+            ? selectedVersionId
+            : null
+        }
+        pending={createPending}
+        onConfirm={handleConfirmNewVersion}
+        onCancel={() => setNewVersionDialog(null)}
+      />
 
       <UnsavedChangesDialog
         open={unsavedDialogOpen}
