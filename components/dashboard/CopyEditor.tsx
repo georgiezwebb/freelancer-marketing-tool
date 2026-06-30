@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   getGuideForTypeName,
   isVersionGuideContent,
+  sanitizeWritingNotes,
 } from "@/lib/marketing-stack-templates";
 
 import type { CopyVersionRecord } from "@/lib/dashboard-types";
@@ -92,6 +93,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
   const [dirty, setDirty] = React.useState(false);
   const notesSaveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedNotes = React.useRef("");
+  const titleInputRef = React.useRef<HTMLInputElement>(null);
   const activeVersionIdRef = React.useRef<string | null>(version?.id ?? null);
   activeVersionIdRef.current = version?.id ?? null;
 
@@ -125,12 +127,35 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
     setNotesStatus("idle");
   }, [version?.id, typeName, showNotesInitially, markClean]);
 
+  const notesCleanupRef = React.useRef<string | null>(null);
+
   React.useEffect(() => {
-    if (!version) return;
+    if (!version || !typeId) return;
     const notes = clampWritingNotes(writingNotes);
-    setUserNotes(notes);
-    lastSavedNotes.current = notes;
-  }, [version?.id, writingNotes]);
+    const cleanNotes = typeName
+      ? sanitizeWritingNotes(typeName, notes)
+      : notes;
+    setUserNotes(cleanNotes);
+    lastSavedNotes.current = cleanNotes;
+
+    if (cleanNotes !== notes && notesCleanupRef.current !== typeId) {
+      notesCleanupRef.current = typeId;
+      void (async () => {
+        try {
+          const res = await fetch(`/api/copy-types/${typeId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ writingNotes: cleanNotes }),
+          });
+          if (!res.ok) return;
+          lastSavedNotes.current = cleanNotes;
+          onWritingNotesSaved(typeId, cleanNotes);
+        } catch {
+          notesCleanupRef.current = null;
+        }
+      })();
+    }
+  }, [version?.id, writingNotes, typeName, typeId, onWritingNotesSaved]);
 
   const saveVersion = React.useCallback(async (): Promise<boolean> => {
     const versionId = version?.id;
@@ -138,7 +163,8 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
 
     const payload = {
       title: title.trim() || null,
-      content,
+      content:
+        typeName && isVersionGuideContent(typeName, content) ? "" : content,
     };
 
     setPending(true);
@@ -164,7 +190,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
     } finally {
       setPending(false);
     }
-  }, [version?.id, title, content, onSaved, markClean]);
+  }, [version?.id, title, content, typeName, onSaved, markClean]);
 
   React.useImperativeHandle(ref, () => ({ save: saveVersion }), [saveVersion]);
 
@@ -181,7 +207,11 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            writingNotes: clampWritingNotes(userNotes),
+            writingNotes: clampWritingNotes(
+              typeName
+                ? sanitizeWritingNotes(typeName, userNotes)
+                : userNotes
+            ),
           }),
         });
         if (!res.ok) throw new Error("Failed to save notes");
@@ -272,8 +302,8 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="flex flex-col gap-3 px-4 pt-3 pb-2 sm:px-6 sm:pt-4 sm:pb-3">
+      <div className="max-h-[min(38vh,15rem)] shrink-0 overflow-y-auto border-b border-foreground/10">
+        <div className="flex flex-col gap-3 px-4 pt-3 pb-3 sm:px-6 sm:pt-4 sm:pb-4">
           {onBackToVersions ? (
             <button
               type="button"
@@ -383,7 +413,29 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
             </div>
           </div>
         </div>
+      </div>
 
+      <div className="shrink-0 border-b border-foreground/10 px-4 py-3 sm:px-6">
+        <div className="space-y-1.5">
+          <label htmlFor="version-title" className="text-xs font-medium">
+            Title
+          </label>
+          <input
+            ref={titleInputRef}
+            id="version-title"
+            type="text"
+            className={inputClass}
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              markDirty();
+            }}
+            placeholder="e.g. Short post, v2, launch week"
+          />
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="sticky top-0 z-10 flex flex-col gap-2 border-b border-foreground/10 bg-background/95 px-4 py-2 backdrop-blur-sm sm:px-6">
           {error || dirty ? (
             <div className="text-xs text-muted-foreground">
@@ -408,21 +460,6 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
         </div>
 
         <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-6">
-        <div className="space-y-1.5">
-          <label htmlFor="version-title" className="text-xs font-medium">
-            Title
-          </label>
-          <input
-            id="version-title"
-            className={inputClass}
-            value={title}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              markDirty();
-            }}
-            placeholder="e.g. Short post, v2, launch week"
-          />
-        </div>
         <div className="flex min-h-0 flex-1 flex-col space-y-1.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <label htmlFor="version-content" className="text-xs font-medium">
@@ -453,6 +490,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
             }}
             onDirty={markDirty}
             placeholder="Write your copy…"
+            externalFieldRef={titleInputRef}
           />
         </div>
         </div>

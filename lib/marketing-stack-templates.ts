@@ -1,7 +1,9 @@
 /**
  * Minimum viable freelance marketing stack — default copy types and
- * placeholder guides for new versions.
+ * read-only writing guides (shown in the notes panel only).
  */
+
+import { stripHtmlToText } from "@/lib/html-content";
 
 export type MarketingStackType = {
   name: string;
@@ -132,12 +134,29 @@ export function resolveVersionContent(
   return typeof content === "string" ? content.trim() : "";
 }
 
-/** True when stored content is the old auto-inserted guide placeholder. */
+/** Normalize text for comparing stored copy/notes against template guides. */
+export function normalizeForGuideMatch(text: string): string {
+  const plain = stripHtmlToText(text).replace(/\r\n/g, "\n");
+  const withoutLegacyFooter = plain.split("\n---")[0] ?? plain;
+  return withoutLegacyFooter.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+/** True when text matches the built-in guide (plain or HTML, with optional legacy footer). */
+export function isGuideLikeText(typeName: string, text: string): boolean {
+  const guide = getGuideForTypeName(typeName);
+  if (!guide || !text.trim()) return false;
+  return normalizeForGuideMatch(text) === normalizeForGuideMatch(guide);
+}
+
+/** True when stored version body is guide placeholder text, not user copy. */
 export function isVersionGuideContent(
   typeName: string,
   content: string
 ): boolean {
-  const guide = getGuideForTypeName(typeName);
-  if (!guide) return false;
-  return content.trim() === guide.trim();
+  return isGuideLikeText(typeName, content);
+}
+
+/** Strip guide placeholder from section writing notes if it was saved by mistake. */
+export function sanitizeWritingNotes(typeName: string, notes: string): string {
+  return isGuideLikeText(typeName, notes) ? "" : notes;
 }
