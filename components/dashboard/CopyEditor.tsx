@@ -92,6 +92,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
   const [dirty, setDirty] = React.useState(false);
   const notesSaveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedNotes = React.useRef("");
+  const titleInputRef = React.useRef<HTMLInputElement>(null);
   const activeVersionIdRef = React.useRef<string | null>(version?.id ?? null);
   activeVersionIdRef.current = version?.id ?? null;
 
@@ -272,8 +273,8 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="flex flex-col gap-3 px-4 pt-3 pb-2 sm:px-6 sm:pt-4 sm:pb-3">
+      <div className="max-h-[min(38vh,15rem)] shrink-0 overflow-y-auto border-b border-foreground/10">
+        <div className="flex flex-col gap-3 px-4 pt-3 pb-3 sm:px-6 sm:pt-4 sm:pb-4">
           {onBackToVersions ? (
             <button
               type="button"
@@ -383,7 +384,29 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
             </div>
           </div>
         </div>
+      </div>
 
+      <div className="shrink-0 border-b border-foreground/10 px-4 py-3 sm:px-6">
+        <div className="space-y-1.5">
+          <label htmlFor="version-title" className="text-xs font-medium">
+            Title
+          </label>
+          <input
+            ref={titleInputRef}
+            id="version-title"
+            type="text"
+            className={inputClass}
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              markDirty();
+            }}
+            placeholder="e.g. Short post, v2, launch week"
+          />
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="sticky top-0 z-10 flex flex-col gap-2 border-b border-foreground/10 bg-background/95 px-4 py-2 backdrop-blur-sm sm:px-6">
           {error || dirty ? (
             <div className="text-xs text-muted-foreground">
@@ -408,21 +431,6 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
         </div>
 
         <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-6">
-        <div className="space-y-1.5">
-          <label htmlFor="version-title" className="text-xs font-medium">
-            Title
-          </label>
-          <input
-            id="version-title"
-            className={inputClass}
-            value={title}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              markDirty();
-            }}
-            placeholder="e.g. Short post, v2, launch week"
-          />
-        </div>
         <div className="flex min-h-0 flex-1 flex-col space-y-1.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <label htmlFor="version-content" className="text-xs font-medium">
@@ -453,6 +461,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
             }}
             onDirty={markDirty}
             placeholder="Write your copy…"
+            externalFieldRef={titleInputRef}
           />
         </div>
         </div>

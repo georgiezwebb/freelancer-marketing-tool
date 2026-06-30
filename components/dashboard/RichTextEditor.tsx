@@ -28,6 +28,8 @@ type Props = {
   onDirty: () => void;
   placeholder?: string;
   className?: string;
+  /** When set, Quill will not keep focus if this field is active (e.g. title input). */
+  externalFieldRef?: React.RefObject<HTMLElement | null>;
 };
 
 type ActiveFormats = {
@@ -59,6 +61,7 @@ export function RichTextEditor({
   onDirty,
   placeholder = "Write your copy…",
   className,
+  externalFieldRef,
 }: Props) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const quillRef = React.useRef<QuillInstance | null>(null);
@@ -66,6 +69,8 @@ export function RichTextEditor({
   const savedRangeRef = React.useRef<QuillRange | null>(null);
   const onChangeRef = React.useRef(onChange);
   const onDirtyRef = React.useRef(onDirty);
+  const externalFieldRefRef = React.useRef(externalFieldRef);
+  externalFieldRefRef.current = externalFieldRef;
   const [ready, setReady] = React.useState(false);
   const [activeFormats, setActiveFormats] =
     React.useState<ActiveFormats>(EMPTY_FORMATS);
@@ -100,6 +105,29 @@ export function RichTextEditor({
     );
   }, []);
 
+  const releaseFocusToExternalField = React.useCallback(
+    (quill: QuillInstance) => {
+      quill.blur();
+      const external = externalFieldRefRef.current?.current;
+      if (!external) return;
+
+      const restore = () => {
+        if (!external.isConnected) return;
+        external.focus({ preventScroll: true });
+      };
+
+      restore();
+      requestAnimationFrame(restore);
+    },
+    []
+  );
+
+  const externalFieldHasFocus = React.useCallback(() => {
+    const external = externalFieldRefRef.current?.current;
+    if (!external) return false;
+    return document.activeElement === external;
+  }, []);
+
   React.useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -113,7 +141,9 @@ export function RichTextEditor({
           source: string
         ) => void)
       | null = null;
-    let handleSelectionChange: (() => void) | null = null;
+    let handleSelectionChange:
+      | ((range: { index: number; length: number } | null) => void)
+      | null = null;
     let cancelled = false;
 
     void (async () => {
@@ -142,13 +172,24 @@ export function RichTextEditor({
         onDirtyRef.current();
       };
 
-      handleSelectionChange = () => {
+      handleSelectionChange = (range: { index: number; length: number } | null) => {
+        if (!range && externalFieldHasFocus() && quill) {
+          releaseFocusToExternalField(quill);
+          return;
+        }
         syncToolbarFromQuill();
       };
 
       quill.on(Quill.events.TEXT_CHANGE, handleChange);
       quill.on(Quill.events.SELECTION_CHANGE, handleSelectionChange);
       syncToolbarFromQuill();
+
+      if (externalFieldHasFocus()) {
+        releaseFocusToExternalField(quill);
+      } else {
+        quill.blur();
+      }
+
       setReady(true);
     })();
 
@@ -169,9 +210,22 @@ export function RichTextEditor({
       setActiveFormats(EMPTY_FORMATS);
       container.innerHTML = "";
     };
-    // value intentionally omitted — parent remounts via `key` when switching versions
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [syncToolbarFromQuill]);
+  }, [syncToolbarFromQuill, releaseFocusToExternalField, externalFieldHasFocus]);
+
+  React.useEffect(() => {
+    const external = externalFieldRefRef.current?.current;
+    if (!external || !ready) return;
+
+    const keepExternalFocus = () => {
+      const quill = quillRef.current;
+      if (!quill) return;
+      releaseFocusToExternalField(quill);
+    };
+
+    external.addEventListener("focus", keepExternalFocus);
+    return () => external.removeEventListener("focus", keepExternalFocus);
+  }, [ready, externalFieldRef, releaseFocusToExternalField]);
 
   function captureSelection() {
     const quill = quillRef.current;
@@ -189,9 +243,7 @@ export function RichTextEditor({
     const saved = savedRangeRef.current;
     if (saved) {
       quill.setSelection(saved.index, saved.length, Quill.sources.SILENT);
-      return;
     }
-    quill.focus();
   }
 
   function withQuill(action: (quill: QuillInstance, Quill: QuillConstructor) => void) {
@@ -199,6 +251,7 @@ export function RichTextEditor({
     const Quill = quillClassRef.current;
     if (!quill || !Quill) return;
     restoreSelection(quill, Quill);
+    quill.focus();
     action(quill, Quill);
   }
 
