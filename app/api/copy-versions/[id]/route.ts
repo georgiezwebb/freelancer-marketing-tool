@@ -4,6 +4,10 @@ import { getOrCreateAppUser } from "@/lib/app-user";
 import { getOwnedCopyVersion } from "@/lib/copy-auth";
 import { prisma } from "@/lib/db";
 import { serializeVersion } from "@/lib/dashboard-types";
+import {
+  isVersionGuideContent,
+  sanitizeWritingNotes,
+} from "@/lib/marketing-stack-templates";
 
 type Params = Promise<{ id: string }>;
 
@@ -60,7 +64,8 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
         : null;
   }
   if ("content" in body) {
-    data.content = typeof content === "string" ? content : "";
+    const raw = typeof content === "string" ? content : "";
+    data.content = isVersionGuideContent(existing.type.name, raw) ? "" : raw;
   }
   if ("archived" in body) {
     if (typeof archived !== "boolean") {

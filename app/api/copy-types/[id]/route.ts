@@ -5,6 +5,7 @@ import { getOwnedCopyType } from "@/lib/copy-auth";
 import { prisma } from "@/lib/db";
 import { clampWritingNotes } from "@/lib/copy-limits";
 import { serializeType } from "@/lib/dashboard-types";
+import { sanitizeWritingNotes } from "@/lib/marketing-stack-templates";
 
 type Params = Promise<{ id: string }>;
 
@@ -50,7 +51,9 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
         { status: 400 }
       );
     }
-    data.writingNotes = clampWritingNotes(writingNotes);
+    data.writingNotes = clampWritingNotes(
+      sanitizeWritingNotes(existing.name, writingNotes)
+    );
   }
 
   if (Object.keys(data).length === 0) {

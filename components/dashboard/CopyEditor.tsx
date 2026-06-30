@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   getGuideForTypeName,
   isVersionGuideContent,
+  sanitizeWritingNotes,
 } from "@/lib/marketing-stack-templates";
 
 import type { CopyVersionRecord } from "@/lib/dashboard-types";
@@ -126,12 +127,35 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
     setNotesStatus("idle");
   }, [version?.id, typeName, showNotesInitially, markClean]);
 
+  const notesCleanupRef = React.useRef<string | null>(null);
+
   React.useEffect(() => {
-    if (!version) return;
+    if (!version || !typeId) return;
     const notes = clampWritingNotes(writingNotes);
-    setUserNotes(notes);
-    lastSavedNotes.current = notes;
-  }, [version?.id, writingNotes]);
+    const cleanNotes = typeName
+      ? sanitizeWritingNotes(typeName, notes)
+      : notes;
+    setUserNotes(cleanNotes);
+    lastSavedNotes.current = cleanNotes;
+
+    if (cleanNotes !== notes && notesCleanupRef.current !== typeId) {
+      notesCleanupRef.current = typeId;
+      void (async () => {
+        try {
+          const res = await fetch(`/api/copy-types/${typeId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ writingNotes: cleanNotes }),
+          });
+          if (!res.ok) return;
+          lastSavedNotes.current = cleanNotes;
+          onWritingNotesSaved(typeId, cleanNotes);
+        } catch {
+          notesCleanupRef.current = null;
+        }
+      })();
+    }
+  }, [version?.id, writingNotes, typeName, typeId, onWritingNotesSaved]);
 
   const saveVersion = React.useCallback(async (): Promise<boolean> => {
     const versionId = version?.id;
@@ -139,7 +163,8 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
 
     const payload = {
       title: title.trim() || null,
-      content,
+      content:
+        typeName && isVersionGuideContent(typeName, content) ? "" : content,
     };
 
     setPending(true);
@@ -165,7 +190,7 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
     } finally {
       setPending(false);
     }
-  }, [version?.id, title, content, onSaved, markClean]);
+  }, [version?.id, title, content, typeName, onSaved, markClean]);
 
   React.useImperativeHandle(ref, () => ({ save: saveVersion }), [saveVersion]);
 
@@ -182,7 +207,11 @@ export const CopyEditor = React.forwardRef<CopyEditorHandle, Props>(
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            writingNotes: clampWritingNotes(userNotes),
+            writingNotes: clampWritingNotes(
+              typeName
+                ? sanitizeWritingNotes(typeName, userNotes)
+                : userNotes
+            ),
           }),
         });
         if (!res.ok) throw new Error("Failed to save notes");

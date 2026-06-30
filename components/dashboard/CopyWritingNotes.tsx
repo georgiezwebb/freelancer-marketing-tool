@@ -60,7 +60,9 @@ export function CopyWritingNotesPanel({
         {hasGuide ? (
           <section className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-xs font-medium text-muted-foreground">Guide</h3>
+              <h3 className="text-xs font-medium text-muted-foreground">
+                Guide <span className="font-normal">(read-only)</span>
+              </h3>
               <button
                 type="button"
                 onClick={() => setGuideMinimized((v) => !v)}
@@ -81,7 +83,10 @@ export function CopyWritingNotesPanel({
               </button>
             </div>
             {!guideMinimized ? (
-              <div className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-sm border border-foreground/20 bg-background/80 p-2.5 text-sm leading-relaxed text-foreground/90">
+              <div
+                className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-sm border border-foreground/20 bg-background/80 p-2.5 text-sm leading-relaxed text-foreground/90"
+                aria-readonly="true"
+              >
                 {templateGuide}
               </div>
             ) : null}
