@@ -386,6 +386,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   User: 'User',
   CopyType: 'CopyType',
+  CopyPiece: 'CopyPiece',
   CopyVersion: 'CopyVersion'
 } as const
 
@@ -402,7 +403,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "copyType" | "copyVersion"
+    modelProps: "user" | "copyType" | "copyPiece" | "copyVersion"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -554,6 +555,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    CopyPiece: {
+      payload: Prisma.$CopyPiecePayload<ExtArgs>
+      fields: Prisma.CopyPieceFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CopyPieceFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CopyPiecePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CopyPieceFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CopyPiecePayload>
+        }
+        findFirst: {
+          args: Prisma.CopyPieceFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CopyPiecePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CopyPieceFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CopyPiecePayload>
+        }
+        findMany: {
+          args: Prisma.CopyPieceFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CopyPiecePayload>[]
+        }
+        create: {
+          args: Prisma.CopyPieceCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CopyPiecePayload>
+        }
+        createMany: {
+          args: Prisma.CopyPieceCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CopyPieceCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CopyPiecePayload>[]
+        }
+        delete: {
+          args: Prisma.CopyPieceDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CopyPiecePayload>
+        }
+        update: {
+          args: Prisma.CopyPieceUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CopyPiecePayload>
+        }
+        deleteMany: {
+          args: Prisma.CopyPieceDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CopyPieceUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CopyPieceUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CopyPiecePayload>[]
+        }
+        upsert: {
+          args: Prisma.CopyPieceUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CopyPiecePayload>
+        }
+        aggregate: {
+          args: Prisma.CopyPieceAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCopyPiece>
+        }
+        groupBy: {
+          args: Prisma.CopyPieceGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CopyPieceGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CopyPieceCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CopyPieceCountAggregateOutputType> | number
+        }
+      }
+    }
     CopyVersion: {
       payload: Prisma.$CopyVersionPayload<ExtArgs>
       fields: Prisma.CopyVersionFieldRefs
@@ -691,8 +766,21 @@ export const CopyTypeScalarFieldEnum = {
 export type CopyTypeScalarFieldEnum = (typeof CopyTypeScalarFieldEnum)[keyof typeof CopyTypeScalarFieldEnum]
 
 
+export const CopyPieceScalarFieldEnum = {
+  id: 'id',
+  typeId: 'typeId',
+  title: 'title',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CopyPieceScalarFieldEnum = (typeof CopyPieceScalarFieldEnum)[keyof typeof CopyPieceScalarFieldEnum]
+
+
 export const CopyVersionScalarFieldEnum = {
   id: 'id',
+  pieceId: 'pieceId',
   typeId: 'typeId',
   title: 'title',
   content: 'content',
@@ -909,6 +997,7 @@ export type PrismaClientOptions = ({
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   copyType?: Prisma.CopyTypeOmit
+  copyPiece?: Prisma.CopyPieceOmit
   copyVersion?: Prisma.CopyVersionOmit
 }
 

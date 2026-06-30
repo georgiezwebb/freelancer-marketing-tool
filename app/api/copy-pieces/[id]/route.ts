@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { getOrCreateAppUser } from "@/lib/app-user";
-import { getOwnedCopyType } from "@/lib/copy-auth";
+import { getOwnedCopyPiece } from "@/lib/copy-auth";
+import { piecesInclude } from "@/lib/copy-types";
 import { prisma } from "@/lib/db";
-import { clampWritingNotes } from "@/lib/copy-limits";
-import { serializeType } from "@/lib/dashboard-types";
-import { sanitizeWritingNotes } from "@/lib/marketing-stack-templates";
+import { serializePiece } from "@/lib/dashboard-types";
 
 type Params = Promise<{ id: string }>;
 
@@ -16,7 +15,7 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
   }
 
   const { id } = await params;
-  const existing = await getOwnedCopyType(user.id, id);
+  const existing = await getOwnedCopyPiece(user.id, id);
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -32,46 +31,33 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
-  const { name, sortOrder, writingNotes } = body as Record<string, unknown>;
-  const data: { name?: string; sortOrder?: number; writingNotes?: string } = {};
+  const { title, sortOrder } = body as Record<string, unknown>;
+  const data: { title?: string; sortOrder?: number } = {};
 
-  if ("name" in body) {
-    if (typeof name !== "string" || name.trim().length === 0) {
-      return NextResponse.json({ error: "name must be non-empty" }, { status: 400 });
-    }
-    data.name = name.trim();
-  }
-  if ("sortOrder" in body && typeof sortOrder === "number") {
-    data.sortOrder = sortOrder;
-  }
-  if ("writingNotes" in body) {
-    if (typeof writingNotes !== "string") {
+  if ("title" in body) {
+    if (typeof title !== "string" || title.trim().length === 0) {
       return NextResponse.json(
-        { error: "writingNotes must be a string" },
+        { error: "title must be non-empty" },
         { status: 400 }
       );
     }
-    data.writingNotes = clampWritingNotes(
-      sanitizeWritingNotes(existing.name, writingNotes)
-    );
+    data.title = title.trim();
+  }
+  if ("sortOrder" in body && typeof sortOrder === "number") {
+    data.sortOrder = sortOrder;
   }
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "No valid fields" }, { status: 400 });
   }
 
-  const type = await prisma.copyType.update({
+  const piece = await prisma.copyPiece.update({
     where: { id },
     data,
-    include: {
-      pieces: {
-        orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
-        include: { versions: { orderBy: { createdAt: "asc" } } },
-      },
-    },
+    include: piecesInclude.include,
   });
 
-  return NextResponse.json(serializeType(type));
+  return NextResponse.json(serializePiece(piece));
 }
 
 export async function DELETE(
@@ -84,11 +70,11 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const existing = await getOwnedCopyType(user.id, id);
+  const existing = await getOwnedCopyPiece(user.id, id);
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  await prisma.copyType.delete({ where: { id } });
+  await prisma.copyPiece.delete({ where: { id } });
   return new NextResponse(null, { status: 204 });
 }

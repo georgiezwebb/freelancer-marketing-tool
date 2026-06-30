@@ -53,6 +53,7 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   User: 'User',
   CopyType: 'CopyType',
+  CopyPiece: 'CopyPiece',
   CopyVersion: 'CopyVersion'
 } as const
 
@@ -96,8 +97,21 @@ export const CopyTypeScalarFieldEnum = {
 export type CopyTypeScalarFieldEnum = (typeof CopyTypeScalarFieldEnum)[keyof typeof CopyTypeScalarFieldEnum]
 
 
+export const CopyPieceScalarFieldEnum = {
+  id: 'id',
+  typeId: 'typeId',
+  title: 'title',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CopyPieceScalarFieldEnum = (typeof CopyPieceScalarFieldEnum)[keyof typeof CopyPieceScalarFieldEnum]
+
+
 export const CopyVersionScalarFieldEnum = {
   id: 'id',
+  pieceId: 'pieceId',
   typeId: 'typeId',
   title: 'title',
   content: 'content',

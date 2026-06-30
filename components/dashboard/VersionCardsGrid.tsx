@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArchiveIcon, FileTextIcon, PlusIcon } from "lucide-react";
+import { ArchiveIcon, ChevronLeftIcon, FileTextIcon, PlusIcon } from "lucide-react";
 
 import {
   Card,
@@ -11,7 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { CopyTypeRecord, CopyVersionRecord } from "@/lib/dashboard-types";
+import type { CopyPieceRecord } from "@/lib/dashboard-types";
+import { versionLabel } from "@/lib/dashboard-types";
 import { ARCHIVE_RETENTION_NOTICE } from "@/lib/archive-retention";
 import { formatDateTime } from "@/lib/format-datetime";
 import { stripHtmlToText } from "@/lib/html-content";
@@ -30,9 +31,11 @@ function contentPreview(content: string, max = 120): string {
 }
 
 type Props = {
-  type: CopyTypeRecord;
+  piece: CopyPieceRecord;
+  typeName: string;
   selectedVersionId: string | null;
   pending?: boolean;
+  onBackToPieces?: () => void;
   onSelectVersion: (versionId: string) => void;
   onCreateVersion: () => void;
   onToggleInUse: (
@@ -42,28 +45,40 @@ type Props = {
 };
 
 export function VersionCardsGrid({
-  type,
+  piece,
+  typeName,
   selectedVersionId,
   pending = false,
+  onBackToPieces,
   onSelectVersion,
   onCreateVersion,
   onToggleInUse,
 }: Props) {
-  const active = activeVersions(type.versions);
-  const archived = archivedVersions(type.versions);
+  const active = activeVersions(piece.versions);
+  const archived = archivedVersions(piece.versions);
   const [showArchived, setShowArchived] = React.useState(false);
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="border-b border-foreground/10 px-4 py-4 sm:px-6">
+        {onBackToPieces ? (
+          <button
+            type="button"
+            onClick={onBackToPieces}
+            className="mb-2 flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground md:hidden"
+          >
+            <ChevronLeftIcon className="size-3.5" />
+            Back to copy list
+          </button>
+        ) : null}
         <p className="inline-block border-2 border-foreground bg-muted/30 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-foreground">
-          {type.name}
+          {typeName}
         </p>
         <h2 className="mt-2 font-heading text-lg font-semibold tracking-tight">
-          Choose copy to edit
+          {piece.title}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Pick a version below or start a new one. Star the copy you&apos;re
+          Pick a version below or create a new one. Star the version you&apos;re
           currently using.
         </p>
       </div>
@@ -71,13 +86,13 @@ export function VersionCardsGrid({
       <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
         <ul
           className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-          aria-label={`Versions for ${type.name}`}
+          aria-label={`Versions for ${piece.title}`}
         >
           {active.map((version) => (
             <li key={version.id}>
               <VersionCard
                 version={version}
-                typeName={type.name}
+                typeName={typeName}
                 selected={selectedVersionId === version.id}
                 disabled={pending}
                 onSelect={() => onSelectVersion(version.id)}
@@ -106,20 +121,20 @@ export function VersionCardsGrid({
                   {ARCHIVE_RETENTION_NOTICE}
                 </p>
                 <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {archived.map((version) => (
-                  <li key={version.id}>
-                    <VersionCard
-                      version={version}
-                      typeName={type.name}
-                      archived
-                      selected={selectedVersionId === version.id}
-                      disabled={pending}
-                      onSelect={() => onSelectVersion(version.id)}
-                      onToggleInUse={onToggleInUse}
-                    />
-                  </li>
-                ))}
-              </ul>
+                  {archived.map((version) => (
+                    <li key={version.id}>
+                      <VersionCard
+                        version={version}
+                        typeName={typeName}
+                        archived
+                        selected={selectedVersionId === version.id}
+                        disabled={pending}
+                        onSelect={() => onSelectVersion(version.id)}
+                        onToggleInUse={onToggleInUse}
+                      />
+                    </li>
+                  ))}
+                </ul>
               </>
             ) : null}
           </div>
@@ -138,7 +153,7 @@ function VersionCard({
   onSelect,
   onToggleInUse,
 }: {
-  version: CopyVersionRecord;
+  version: CopyPieceRecord["versions"][number];
   typeName: string;
   archived?: boolean;
   selected: boolean;
@@ -149,7 +164,7 @@ function VersionCard({
     inUse: boolean
   ) => boolean | void | Promise<boolean | void>;
 }) {
-  const title = version.title?.trim() || "Untitled";
+  const label = versionLabel(version);
   const preview = isVersionGuideContent(typeName, version.content)
     ? "No content yet"
     : contentPreview(version.content);
@@ -172,16 +187,13 @@ function VersionCard({
           type="button"
           disabled={disabled}
           onClick={onSelect}
-          className={cn(
-            "flex min-w-0 flex-1 flex-col text-left",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
-          )}
+          className="flex min-w-0 flex-1 flex-col text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
         >
           <CardHeader className="border-b border-foreground/10 pb-3">
             <CardTitle className="flex items-start gap-2 text-sm">
               <FileTextIcon className="mt-0.5 size-4 shrink-0 opacity-70" />
               <span className="line-clamp-2 flex-1">
-                {title}
+                {label}
                 {archived ? (
                   <span className="ml-1.5 text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
                     · Archived
@@ -247,7 +259,7 @@ function NewVersionCard({
           </span>
           <span className="text-sm font-medium">New version</span>
           <span className="text-xs text-muted-foreground">
-            Start fresh copy for this section
+            Blank, from current, or from a previous version
           </span>
         </CardContent>
       </Card>

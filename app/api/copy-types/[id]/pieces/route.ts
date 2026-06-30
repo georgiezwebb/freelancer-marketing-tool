@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 
 import { getOrCreateAppUser } from "@/lib/app-user";
 import { getOwnedCopyType } from "@/lib/copy-auth";
+import { piecesInclude } from "@/lib/copy-types";
 import { prisma } from "@/lib/db";
 import { resolveVersionContent } from "@/lib/marketing-stack-templates";
-import { serializeVersion } from "@/lib/dashboard-types";
+import { serializePiece } from "@/lib/dashboard-types";
 
 type Params = Promise<{ id: string }>;
 
@@ -24,33 +25,37 @@ export async function POST(request: Request, { params }: { params: Params }) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    body = {};
   }
 
   const title =
     body && typeof body === "object" && "title" in body
       ? (body as { title?: unknown }).title
       : undefined;
-  const rawContent =
-    body && typeof body === "object" && "content" in body
-      ? (body as { content?: unknown }).content
-      : undefined;
 
-  const content = resolveVersionContent(
-    type.name,
-    typeof rawContent === "string" ? rawContent : undefined
-  );
-
-  const version = await prisma.copyVersion.create({
-    data: {
-      typeId,
-      title:
-        typeof title === "string" && title.trim().length > 0
-          ? title.trim()
-          : null,
-      content,
-    },
+  const maxOrder = await prisma.copyPiece.aggregate({
+    where: { typeId },
+    _max: { sortOrder: true },
   });
 
-  return NextResponse.json(serializeVersion(version), { status: 201 });
+  const pieceTitle =
+    typeof title === "string" && title.trim().length > 0
+      ? title.trim()
+      : "Untitled";
+
+  const content = resolveVersionContent(type.name, undefined);
+
+  const piece = await prisma.copyPiece.create({
+    data: {
+      typeId,
+      title: pieceTitle,
+      sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
+      versions: {
+        create: { content },
+      },
+    },
+    include: piecesInclude.include,
+  });
+
+  return NextResponse.json(serializePiece(piece), { status: 201 });
 }

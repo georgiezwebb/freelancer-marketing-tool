@@ -7,7 +7,7 @@ export async function purgeExpiredArchivedVersions(userId?: string) {
   return prisma.copyVersion.deleteMany({
     where: {
       archivedAt: { not: null, lt: cutoff },
-      ...(userId ? { type: { userId } } : {}),
+      ...(userId ? { piece: { type: { userId } } } : {}),
     },
   });
 }

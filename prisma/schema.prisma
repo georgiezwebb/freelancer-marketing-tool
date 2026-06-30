@@ -21,27 +21,47 @@ model User {
   copyTypes CopyType[]
 }
 
-/// User-defined category for organizing copy (e.g. Type 1, LinkedIn, Email).
+/// User-defined category for organizing copy (e.g. LinkedIn, Email).
 model CopyType {
-  id        String        @id @default(cuid())
-  userId    String
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name          String
-  writingNotes  String        @default("") @db.Text
-  sortOrder     Int           @default(0)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  versions  CopyVersion[]
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  writingNotes String        @default("") @db.Text
+  sortOrder    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  pieces       CopyPiece[]
+  /// Legacy direct versions — populated until migrateCopyPiecesIfNeeded runs.
+  versions     CopyVersion[] @relation("LegacyTypeVersions")
 
   @@index([userId])
   @@map("copy_types")
 }
 
-/// A version or post within a type (title + body).
-model CopyVersion {
-  id        String   @id @default(cuid())
+/// A titled copy item within a type (e.g. "Launch week post").
+model CopyPiece {
+  id        String        @id @default(cuid())
   typeId    String
-  type      CopyType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  type      CopyType      @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  title     String
+  sortOrder Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  versions  CopyVersion[]
+
+  @@index([typeId])
+  @@map("copy_pieces")
+}
+
+/// A version of a copy piece (body only — title lives on the piece).
+model CopyVersion {
+  id         String    @id @default(cuid())
+  pieceId    String?
+  piece      CopyPiece? @relation(fields: [pieceId], references: [id], onDelete: Cascade)
+  /// Legacy — used during migration from flat type→version model.
+  typeId     String?
+  type       CopyType? @relation("LegacyTypeVersions", fields: [typeId], references: [id], onDelete: Cascade)
   title      String?
   content    String    @default("") @db.Text
   inUse      Boolean   @default(false)
@@ -49,6 +69,7 @@ model CopyVersion {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
+  @@index([pieceId])
   @@index([typeId])
   @@map("copy_versions")
 }

@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       name: name.trim(),
       sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
     },
-    include: { versions: true },
+    include: { pieces: { include: { versions: true } } },
   });
 
   return NextResponse.json(serializeType(type), { status: 201 });
